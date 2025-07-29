@@ -8,9 +8,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^docs/
       - id: end-of-file-fixer
-        exclude: ^docs/
       - id: check-yaml
         args: ["--unsafe"]
       - id: check-json
@@ -19,6 +17,7 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=1000"]
       - id: debug-statements
+        exclude: \.md$
 
   # Python code formatting with black (matches GitHub Actions)
   - repo: https://github.com/psf/black
@@ -26,6 +25,7 @@ repos:
     hooks:
       - id: black
         args: ["--line-length=88"]
+        exclude: \.md$
 
   # Import sorting with isort (matches GitHub Actions)
   - repo: https://github.com/pycqa/isort
@@ -33,6 +33,7 @@ repos:
     hooks:
       - id: isort
         args: ["--profile=black", "--line-length=88"]
+        exclude: \.md$
 
   # Linting with flake8 (matches GitHub Actions - critical errors only)
   - repo: https://github.com/pycqa/flake8
@@ -44,6 +45,7 @@ repos:
           - "--max-complexity=10"
           - "--select=E9,F63,F7,F82"
           - "--extend-ignore=E203,W503"
+        exclude: \.md$
 
   # Security scanning with bandit (matches GitHub Actions)
   - repo: https://github.com/pycqa/bandit
@@ -53,7 +55,6 @@ repos:
         args: ["-r", "src", "--skip", "B112"]
         pass_filenames: false
         files: ^src/
-        exclude: __pycache__|\.pyc$
 
 # Configure specific settings
 default_language_version:
