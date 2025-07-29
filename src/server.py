@@ -21,11 +21,13 @@ from dotenv import load_dotenv
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from .documentation.tool_doc_generator import ToolDocumentationGenerator
 from .executor.kubectl_executor import KubectlExecutor
 from .recommender.krr_client import KrrClient
 from .recommender.models import KrrStrategy, RecommendationFilter
 from .safety.confirmation_manager import ConfirmationManager
 from .safety.models import ResourceChange, ChangeType
+from .versioning.tool_versioning import versioned_tool, version_registry, VersionStatus
 
 # Load environment variables
 load_dotenv()
@@ -137,6 +139,7 @@ class KrrMCPServer:
         self.krr_client = None
         self.confirmation_manager = None
         self.kubectl_executor = None
+        self.doc_generator = None
         
         # Initialize async components
         asyncio.create_task(self._initialize_components())
@@ -175,6 +178,9 @@ class KrrMCPServer:
                 mock_commands=self.config.mock_kubectl_commands,
             )
             
+            # Initialize documentation generator
+            self.doc_generator = ToolDocumentationGenerator(self)
+            
             self.logger.info("Server components initialized successfully")
             
         except Exception as e:
@@ -185,6 +191,15 @@ class KrrMCPServer:
         """Register MCP tools for AI assistant interaction."""
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with krr integration",
+                "Support for all krr strategies (simple, medium, aggressive)",
+                "Namespace filtering and resource pattern matching",
+                "Comprehensive error handling and caching",
+            ]
+        )
         async def scan_recommendations(
             namespace: Optional[str] = None,
             strategy: Optional[str] = None,
@@ -310,6 +325,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with safety assessment",
+                "Impact analysis and change preview",
+                "Integration with safety validator",
+                "Risk level calculation and warnings",
+            ]
+        )
         async def preview_changes(
             recommendations: List[Dict[str, Any]]
         ) -> Dict[str, Any]:
@@ -436,6 +460,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with token-based security",
+                "Human-readable confirmation prompts",
+                "Safety assessment integration",
+                "Complete audit trail support",
+            ]
+        )
         async def request_confirmation(
             changes: Dict[str, Any],
             risk_level: str = "medium"
@@ -546,6 +579,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with kubectl integration",
+                "Transaction-based execution with rollback support",
+                "Progress tracking and real-time callbacks",
+                "Comprehensive error handling and recovery",
+            ]
+        )
         async def apply_recommendations(
             confirmation_token: str,
             dry_run: bool = False
@@ -692,6 +734,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with snapshot restoration",
+                "Confirmation requirement for safety",
+                "Complete audit trail integration",
+                "Automatic cleanup of expired snapshots",
+            ]
+        )
         async def rollback_changes(
             rollback_id: str,
             confirmation_token: str
@@ -771,6 +822,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with comprehensive safety analysis",
+                "Multi-factor risk assessment",
+                "Production namespace protection",
+                "Critical workload detection",
+            ]
+        )
         async def get_safety_report(
             changes: Dict[str, Any]
         ) -> Dict[str, Any]:
@@ -864,6 +924,15 @@ class KrrMCPServer:
                 }
         
         @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with audit trail querying",
+                "Filtering by operation type and status",
+                "Pagination and limit support",
+                "Export capabilities for compliance",
+            ]
+        )
         async def get_execution_history(
             limit: int = 10,
             operation_filter: Optional[str] = None,
@@ -922,6 +991,199 @@ class KrrMCPServer:
                     "error": str(e),
                     "error_code": "HISTORY_RETRIEVAL_FAILED"
                 }
+        
+        @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with comprehensive API documentation",
+                "Automatic tool discovery and parameter extraction", 
+                "Multiple output formats (Markdown, JSON, OpenAPI)",
+                "Safety features documentation and usage examples",
+            ]
+        )
+        async def generate_documentation(
+            output_format: str = "markdown",
+            include_examples: bool = True
+        ) -> Dict[str, Any]:
+            """Generate comprehensive documentation for all MCP tools.
+            
+            This tool creates API reference documentation with usage examples,
+            safety information, and complete parameter descriptions.
+            
+            Args:
+                output_format: Documentation format (markdown, json, openapi)
+                include_examples: Whether to include usage examples
+                
+            Returns:
+                Dictionary with generated documentation
+            """
+            self.logger.info(
+                "Generating tool documentation",
+                output_format=output_format,
+                include_examples=include_examples,
+            )
+            
+            try:
+                if not self.doc_generator:
+                    return {
+                        "status": "error",
+                        "error": "Documentation generator not initialized",
+                        "error_code": "COMPONENT_NOT_READY"
+                    }
+                
+                # Generate full documentation
+                documentation = self.doc_generator.generate_full_documentation()
+                
+                if output_format.lower() == "json":
+                    return {
+                        "status": "success",
+                        "documentation": documentation,
+                        "format": "json",
+                        "files_generated": [
+                            "docs/api/api-documentation.json",
+                            "docs/api/api-reference.md",
+                            "docs/api/safety-guide.md",
+                            "docs/api/usage-examples.md",
+                            "docs/api/openapi.json",
+                        ]
+                    }
+                elif output_format.lower() == "openapi":
+                    return {
+                        "status": "success", 
+                        "openapi_spec": documentation,
+                        "format": "openapi",
+                        "message": "OpenAPI 3.0 specification generated successfully"
+                    }
+                else:  # Default to markdown
+                    return {
+                        "status": "success",
+                        "documentation_summary": {
+                            "tools_documented": len(documentation.get("tools", {})),
+                            "safety_features": len(documentation.get("safety_features", {}).get("safety_guarantees", [])),
+                            "examples_included": len(documentation.get("examples", {}).get("basic_workflow", {}).get("steps", [])),
+                            "error_codes": len(documentation.get("error_codes", {}).get("error_codes", {})),
+                        },
+                        "format": "markdown",
+                        "files_generated": [
+                            "docs/api/api-reference.md",
+                            "docs/api/safety-guide.md", 
+                            "docs/api/usage-examples.md",
+                        ],
+                        "message": "Documentation generated successfully in Markdown format"
+                    }
+                
+            except Exception as e:
+                self.logger.error("Failed to generate documentation", error=str(e))
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "error_code": "DOCUMENTATION_GENERATION_FAILED"
+                }
+        
+        @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
+                "Initial implementation with comprehensive version tracking",
+                "Support for deprecation warnings and migration guides",
+                "Backward compatibility checking",
+                "Tool version registry and management",
+            ]
+        )
+        async def get_tool_versions(
+            tool_name: Optional[str] = None,
+            include_deprecated: bool = False
+        ) -> Dict[str, Any]:
+            """Get version information for MCP tools.
+            
+            This tool provides version information, deprecation status,
+            and migration guidance for all or specific MCP tools.
+            
+            Args:
+                tool_name: Specific tool to query (optional, all tools if not specified)
+                include_deprecated: Whether to include deprecated versions
+                
+            Returns:
+                Dictionary with version information and migration guidance
+            """
+            self.logger.info(
+                "Retrieving tool version information",
+                tool_name=tool_name,
+                include_deprecated=include_deprecated,
+            )
+            
+            try:
+                if tool_name:
+                    # Get information for specific tool
+                    current_version = version_registry.get_current_version(tool_name)
+                    supported_versions = version_registry.get_supported_versions(tool_name)
+                    
+                    if not current_version:
+                        return {
+                            "status": "error",
+                            "error": f"Tool '{tool_name}' not found in version registry",
+                            "error_code": "TOOL_NOT_FOUND",
+                            "available_tools": list(version_registry.tools.keys())
+                        }
+                    
+                    tool_info = {
+                        "tool_name": tool_name,
+                        "current_version": current_version,
+                        "supported_versions": supported_versions,
+                        "version_details": {}
+                    }
+                    
+                    # Add detailed version information
+                    for version in supported_versions:
+                        version_info = version_registry.get_version_info(tool_name, version)
+                        if version_info:
+                            detail = {
+                                "status": version_info.status.value,
+                                "introduced_at": version_info.introduced_at.isoformat(),
+                                "changelog": version_info.changelog,
+                            }
+                            
+                            if version_info.deprecated_at:
+                                detail["deprecated_at"] = version_info.deprecated_at.isoformat()
+                                detail["migration_notes"] = version_info.migration_notes
+                            
+                            if include_deprecated or version_info.status != VersionStatus.DEPRECATED:
+                                tool_info["version_details"][version] = detail
+                    
+                    return {
+                        "status": "success",
+                        "tool_info": tool_info
+                    }
+                else:
+                    # Get information for all tools
+                    all_tools_info = version_registry.get_all_tools_info()
+                    
+                    # Filter deprecated versions if requested
+                    if not include_deprecated:
+                        for tool, info in all_tools_info.items():
+                            info["versions"] = {
+                                v: details for v, details in info["versions"].items()
+                                if details["status"] != "deprecated"
+                            }
+                    
+                    return {
+                        "status": "success",
+                        "all_tools": all_tools_info,
+                        "summary": {
+                            "total_tools": len(all_tools_info),
+                            "total_versions": sum(len(info["versions"]) for info in all_tools_info.values()),
+                            "include_deprecated": include_deprecated,
+                        }
+                    }
+                
+            except Exception as e:
+                self.logger.error("Failed to retrieve tool version information", error=str(e))
+                return {
+                    "status": "error", 
+                    "error": str(e),
+                    "error_code": "VERSION_RETRIEVAL_FAILED"
+                }
     
     async def start(self) -> None:
         """Start the MCP server."""
@@ -952,8 +1214,10 @@ class KrrMCPServer:
         self.logger.info("Stopping krr MCP Server")
         self._running = False
         
-        # Clean up confirmation tokens
-        self._confirmation_tokens.clear()
+        # Clean up any resources if needed
+        if hasattr(self, 'confirmation_manager') and self.confirmation_manager:
+            # Cleanup handled by confirmation manager
+            pass
     
     async def _validate_configuration(self) -> None:
         """Validate server configuration and dependencies."""
