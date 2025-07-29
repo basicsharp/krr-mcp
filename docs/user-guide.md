@@ -1,10 +1,10 @@
 # User Guide
 
-Complete guide to using the krr MCP Server with AI assistants for safe Kubernetes resource optimization.
+Complete guide to using the KRR MCP Server with AI assistants for safe Kubernetes resource optimization.
 
 ## 🎯 Overview
 
-The krr MCP Server enables you to optimize Kubernetes resources through natural language conversations with AI assistants like Claude. This guide shows you how to use all features safely and effectively.
+The KRR MCP Server enables you to optimize Kubernetes resources through natural language conversations with AI assistants like Claude. This guide shows you how to use all features safely and effectively.
 
 ### Key Principles
 
@@ -18,7 +18,7 @@ The krr MCP Server enables you to optimize Kubernetes resources through natural 
 ### Prerequisites
 
 Before starting, ensure you have:
-- ✅ krr MCP Server installed ([Installation Guide](installation.md))
+- ✅ KRR MCP Server installed ([Installation Guide](installation.md))
 - ✅ Claude Desktop or another MCP client configured
 - ✅ Access to a Kubernetes cluster with Prometheus
 - ✅ Basic understanding of Kubernetes resources
@@ -509,4 +509,4 @@ Once you're comfortable with basic usage:
 
 ---
 
-**Remember**: The krr MCP Server is designed to make optimization both powerful and safe. When in doubt, start with analysis, use previews extensively, and always test in non-production environments first. 
+**Remember**: The KRR MCP Server is designed to make optimization both powerful and safe. When in doubt, start with analysis, use previews extensively, and always test in non-production environments first. 

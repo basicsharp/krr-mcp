@@ -1,5 +1,5 @@
 
-# TASKS.md - krr MCP Server Project
+# TASKS.md - KRR MCP Server Project
 
 ## Milestone 1: Project Setup and Environment Configuration ✅ COMPLETED
 **Goal**: Establish development environment and project structure
@@ -310,8 +310,13 @@
   - [ ] Configure RBAC policies
 - [ ] Create distribution packages:
   - [ ] Python package for PyPI
+  - [ ] uvx compatibility and testing:
+    - [ ] Verify entry point configuration for uvx
+    - [ ] Test installation and execution via uvx
+    - [ ] Add uvx-specific documentation
+    - [ ] Optimize package for uvx usage patterns
   - [ ] Debian/RPM packages
-  - [ ] Homebrew formula
+  - [ ] Homebrew formula  
   - [ ] Windows installer
 - [ ] Implement monitoring:
   - [ ] Prometheus metrics exposure

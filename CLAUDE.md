@@ -1,8 +1,8 @@
-# CLAUDE.md - AI Assistant Guidelines for krr MCP Server Project
+# CLAUDE.md - AI Assistant Guidelines for KRR MCP Server Project
 
 ## Project Overview
 
-You are helping to build the krr MCP Server, a safety-critical integration that bridges AI assistants with Kubernetes resource optimization. This server enables AI-powered analysis and application of resource recommendations while maintaining strict human oversight.
+You are helping to build the KRR MCP Server, a safety-critical integration that bridges AI assistants with Kubernetes resource optimization. This server enables AI-powered analysis and application of resource recommendations while maintaining strict human oversight.
 
 ### Core Principle: Safety First
 **CRITICAL**: No Kubernetes resources should ever be modified without explicit user confirmation. This is the #1 priority throughout the entire project.
@@ -573,7 +573,7 @@ Extended the MCP server with 2 new tools and comprehensive versioning integratio
 
 **Testing Strategy**: Invested heavily in testing both new subsystems independently and their integration with existing components to ensure reliability.
 
-The krr MCP Server now provides a **complete, enterprise-ready implementation** with professional-grade documentation, version management, and comprehensive safety controls suitable for production Kubernetes environments.
+The KRR MCP Server now provides a **complete, enterprise-ready implementation** with professional-grade documentation, version management, and comprehensive safety controls suitable for production Kubernetes environments.
 
 ---
 
@@ -715,7 +715,7 @@ Built robust kubectl execution system for safe cluster modifications:
 
 **Component Architecture**: Maintained modular design with clear separation between krr integration, MCP tools, safety validation, and execution to enable independent testing and maintenance.
 
-The krr MCP Server now provides a complete, production-ready implementation for AI-assisted Kubernetes resource optimization with bulletproof safety controls, comprehensive error handling, and full audit trail capabilities.
+The KRR MCP Server now provides a complete, production-ready implementation for AI-assisted Kubernetes resource optimization with bulletproof safety controls, comprehensive error handling, and full audit trail capabilities.
 
 ---
 
@@ -851,7 +851,7 @@ Built a comprehensive, enterprise-grade testing infrastructure with 78+ tests ac
 
 **CI/CD Integration**: Created complete GitHub Actions workflow with security scanning, performance benchmarks, and automated reporting for professional development workflow.
 
-The krr MCP Server now has a **bulletproof testing infrastructure** that ensures safety-critical functionality works correctly under all conditions, making it ready for production Kubernetes environments with complete confidence in system reliability and safety.
+The KRR MCP Server now has a **bulletproof testing infrastructure** that ensures safety-critical functionality works correctly under all conditions, making it ready for production Kubernetes environments with complete confidence in system reliability and safety.
 
 ---
 
@@ -860,7 +860,7 @@ The krr MCP Server now has a **bulletproof testing infrastructure** that ensures
 ### Major Accomplishments This Session
 
 **✅ Complete Milestone 8: Documentation**
-Built a comprehensive, enterprise-grade documentation suite that makes the krr MCP Server accessible to users, developers, and operators:
+Built a comprehensive, enterprise-grade documentation suite that makes the KRR MCP Server accessible to users, developers, and operators:
 
 *Professional Project Front Page (`README.md`)*:
 - Complete project overview with safety-first messaging and clear value proposition
@@ -1010,4 +1010,4 @@ Established professional documentation practices throughout the suite:
 
 **Auto-Generation Integration**: Leveraged existing documentation generator to create consistent, maintainable API documentation that stays synchronized with code changes and reduces manual maintenance burden.
 
-The krr MCP Server now provides **complete, enterprise-ready documentation** that enables safe AI-assisted Kubernetes optimization with confidence. The documentation suite serves all stakeholders from individual developers to enterprise platform teams, emphasizing safety while showcasing powerful optimization capabilities.
+The KRR MCP Server now provides **complete, enterprise-ready documentation** that enables safe AI-assisted Kubernetes optimization with confidence. The documentation suite serves all stakeholders from individual developers to enterprise platform teams, emphasizing safety while showcasing powerful optimization capabilities.

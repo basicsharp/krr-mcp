@@ -1,4 +1,4 @@
-# krr MCP Server Usage Examples
+# KRR MCP Server Usage Examples
 
 ## Complete workflow for optimizing Kubernetes resources
 

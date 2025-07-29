@@ -1,18 +1,18 @@
 # Safety Guide
 
-Complete guide to the safety features and risk management capabilities of the krr MCP Server.
+Complete guide to the safety features and risk management capabilities of the KRR MCP Server.
 
 ## 🚨 Core Safety Principle
 
 **NO CLUSTER MODIFICATIONS WITHOUT EXPLICIT USER CONFIRMATION**
 
-Every aspect of the krr MCP Server is designed around this fundamental principle. This guide explains how these safety mechanisms work and how to use them effectively.
+Every aspect of the KRR MCP Server is designed around this fundamental principle. This guide explains how these safety mechanisms work and how to use them effectively.
 
 ## 🛡️ Safety Architecture
 
 ### Multi-Layer Protection
 
-The krr MCP Server implements defense-in-depth with multiple safety layers:
+The KRR MCP Server implements defense-in-depth with multiple safety layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -498,7 +498,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Safety violation blocked in krr MCP Server"
+          summary: "Safety violation blocked in KRR MCP Server"
           
       - alert: HighRollbackRate
         expr: rate(krr_mcp_rollbacks_total[1h]) > 0.1
@@ -549,4 +549,4 @@ uv run python scripts/compliance_report.py \
 
 ---
 
-**Remember**: The safety features of krr MCP Server are designed to prevent accidents, not to obstruct legitimate operations. Understanding and working with these systems will help you optimize your clusters safely and confidently. 
+**Remember**: The safety features of KRR MCP Server are designed to prevent accidents, not to obstruct legitimate operations. Understanding and working with these systems will help you optimize your clusters safely and confidently. 

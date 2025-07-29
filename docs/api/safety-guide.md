@@ -1,6 +1,6 @@
-# krr MCP Server Safety Guide
+# KRR MCP Server Safety Guide
 
-The krr MCP Server implements comprehensive safety controls to prevent accidental cluster damage while enabling AI-assisted optimization.
+The KRR MCP Server implements comprehensive safety controls to prevent accidental cluster damage while enabling AI-assisted optimization.
 
 ## Safety Levels
 

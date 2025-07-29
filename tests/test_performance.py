@@ -1,4 +1,4 @@
-"""Performance tests for krr MCP Server.
+"""Performance tests for KRR MCP Server.
 
 These tests verify performance characteristics under various load conditions,
 including large cluster simulations and concurrent request handling.

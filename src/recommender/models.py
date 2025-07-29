@@ -1,4 +1,4 @@
-"""Recommendation models for krr MCP Server.
+"""Recommendation models for KRR MCP Server.
 
 This module defines data models for krr recommendations, filtering,
 and caching functionality.

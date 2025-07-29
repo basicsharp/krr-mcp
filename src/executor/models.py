@@ -1,4 +1,4 @@
-"""Execution models for krr MCP Server.
+"""Execution models for KRR MCP Server.
 
 This module defines data models for kubectl execution,
 transaction management, and execution results.

@@ -1,4 +1,4 @@
-"""krr MCP Server - Main server implementation.
+"""KRR MCP Server - Main server implementation.
 
 This module provides the main MCP server implementation for safe Kubernetes
 resource optimization using krr. It includes comprehensive safety controls,
@@ -113,7 +113,7 @@ class ServerConfig(BaseModel):
 
 
 class KrrMCPServer:
-    """Main krr MCP Server implementation.
+    """Main KRR MCP Server implementation.
     
     This server provides AI assistants with safe access to Kubernetes resource
     optimization through the krr tool. It implements comprehensive safety controls
@@ -148,7 +148,7 @@ class KrrMCPServer:
         self._register_tools()
         
         self.logger.info(
-            "krr MCP Server initialized",
+            "KRR MCP Server initialized",
             prometheus_url=config.prometheus_url,
             krr_strategy=config.krr_strategy,
             development_mode=config.development_mode,
@@ -1192,7 +1192,7 @@ class KrrMCPServer:
             return
         
         self._running = True
-        self.logger.info("Starting krr MCP Server")
+        self.logger.info("Starting KRR MCP Server")
         
         try:
             # Validate configuration
@@ -1211,7 +1211,7 @@ class KrrMCPServer:
         if not self._running:
             return
         
-        self.logger.info("Stopping krr MCP Server")
+        self.logger.info("Stopping KRR MCP Server")
         self._running = False
         
         # Clean up any resources if needed

@@ -1,4 +1,4 @@
-"""Safety models for krr MCP Server.
+"""Safety models for KRR MCP Server.
 
 This module defines data models for safety-critical operations including
 confirmation workflows, risk assessment, and audit trail management.

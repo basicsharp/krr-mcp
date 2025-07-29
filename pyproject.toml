@@ -5,7 +5,7 @@ description = "MCP server for safe Kubernetes resource optimization using krr"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "krr MCP Server Team" }
+    { name = "KRR MCP Server Team" }
 ]
 keywords = ["kubernetes", "optimization", "mcp", "krr", "ai"]
 classifiers = [

@@ -1,6 +1,6 @@
-# krr MCP Server API Documentation
+# KRR MCP Server API Documentation
 
-Complete API reference for the krr MCP Server, a safety-first MCP implementation for AI-assisted Kubernetes resource optimization.
+Complete API reference for the KRR MCP Server, a safety-first MCP implementation for AI-assisted Kubernetes resource optimization.
 
 ## 📚 Documentation Index
 

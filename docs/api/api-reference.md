@@ -1,4 +1,4 @@
-# krr MCP Server API Reference
+# KRR MCP Server API Reference
 
 Generated on: 2025-07-29T16:36:57.350502
 

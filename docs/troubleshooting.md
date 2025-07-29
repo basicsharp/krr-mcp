@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Comprehensive troubleshooting guide for the krr MCP Server, covering common issues, error messages, and solutions.
+Comprehensive troubleshooting guide for the KRR MCP Server, covering common issues, error messages, and solutions.
 
 ## 🔍 Quick Diagnostic Steps
 

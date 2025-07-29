@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive test runner for krr MCP Server.
+"""Comprehensive test runner for KRR MCP Server.
 
 This script provides different test execution modes with coverage reporting,
 performance tracking, and quality gate validation.
@@ -149,7 +149,7 @@ class TestRunner:
         cmd = [
             "python", "-m", "coverage", "html",
             "--directory", str(self.coverage_dir),
-            "--title", "krr MCP Server Coverage Report"
+            "--title", "KRR MCP Server Coverage Report"
         ]
         
         success = self._run_command(cmd, "Coverage HTML report")
@@ -318,7 +318,7 @@ class TestRunner:
 
 def main():
     """Main test runner entry point."""
-    parser = argparse.ArgumentParser(description="krr MCP Server Test Runner")
+    parser = argparse.ArgumentParser(description="KRR MCP Server Test Runner")
     
     parser.add_argument(
         "--suite", 

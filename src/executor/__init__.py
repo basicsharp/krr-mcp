@@ -1,4 +1,4 @@
-"""Executor module for krr MCP Server.
+"""Executor module for KRR MCP Server.
 
 This module provides safe execution of kubectl operations:
 - Transaction-based resource updates

@@ -1,4 +1,4 @@
-"""Chaos tests for krr MCP Server.
+"""Chaos tests for KRR MCP Server.
 
 These tests simulate various failure scenarios to verify system resilience,
 including network interruptions, resource exhaustion, and external dependency failures.

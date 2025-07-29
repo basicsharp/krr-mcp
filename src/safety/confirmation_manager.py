@@ -1,4 +1,4 @@
-"""Confirmation management for krr MCP Server.
+"""Confirmation management for KRR MCP Server.
 
 This module handles user confirmation workflows, token management,
 and audit trail for all safety-critical operations.

@@ -1,4 +1,4 @@
-"""Safety validation engine for krr MCP Server.
+"""Safety validation engine for KRR MCP Server.
 
 This module implements comprehensive safety checks and validation logic
 to prevent dangerous cluster modifications.

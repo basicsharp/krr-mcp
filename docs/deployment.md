@@ -1,10 +1,10 @@
 # Deployment Guide
 
-Production deployment guide for the krr MCP Server, covering container deployment, monitoring, security, and operational best practices.
+Production deployment guide for the KRR MCP Server, covering container deployment, monitoring, security, and operational best practices.
 
 ## 🎯 Deployment Overview
 
-This guide covers deploying the krr MCP Server in production environments with proper security, monitoring, and operational controls.
+This guide covers deploying the KRR MCP Server in production environments with proper security, monitoring, and operational controls.
 
 ### Deployment Options
 
@@ -375,7 +375,7 @@ krr-mcp-helm/
 ```yaml
 apiVersion: v2
 name: krr-mcp-server
-description: A Helm chart for krr MCP Server
+description: A Helm chart for KRR MCP Server
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
@@ -587,7 +587,7 @@ sudo chmod 600 ${CONFIG_DIR}/config.env
 # Create systemd service
 sudo tee /etc/systemd/system/krr-mcp.service << EOF
 [Unit]
-Description=krr MCP Server
+Description=KRR MCP Server
 After=network.target
 Wants=network.target
 
@@ -630,7 +630,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable krr-mcp
 sudo systemctl start krr-mcp
 
-echo "krr MCP Server installed successfully!"
+echo "KRR MCP Server installed successfully!"
 echo "Check status with: sudo systemctl status krr-mcp"
 echo "View logs with: sudo journalctl -u krr-mcp -f"
 ```
@@ -683,7 +683,7 @@ krr_mcp_component_health = Gauge('krr_mcp_component_health', 'Component health s
 ```json
 {
   "dashboard": {
-    "title": "krr MCP Server",
+    "title": "KRR MCP Server",
     "panels": [
       {
         "title": "Request Rate",
@@ -733,8 +733,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "krr MCP Server is down"
-          description: "krr MCP Server has been down for more than 1 minute."
+          summary: "KRR MCP Server is down"
+          description: "KRR MCP Server has been down for more than 1 minute."
 
       - alert: KrrMcpHighErrorRate
         expr: rate(krr_mcp_executions_total{status="error"}[5m]) > 0.1
@@ -742,7 +742,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High error rate in krr MCP Server"
+          summary: "High error rate in KRR MCP Server"
           description: "Error rate is {{ $value }} errors per second."
 
       - alert: KrrMcpSafetyViolations
@@ -760,7 +760,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "krr MCP Server component unhealthy"
+          summary: "KRR MCP Server component unhealthy"
           description: "Component {{ $labels.component }} is unhealthy."
 ```
 
@@ -884,7 +884,7 @@ spec:
 
 ```yaml
 # .github/workflows/deploy.yml
-name: Deploy krr MCP Server
+name: Deploy KRR MCP Server
 
 on:
   push:

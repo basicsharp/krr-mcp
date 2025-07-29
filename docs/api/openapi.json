@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "krr MCP Server API",
+    "title": "KRR MCP Server API",
     "version": "1.0.0",
     "description": "MCP server for safe Kubernetes resource optimization using krr"
   },

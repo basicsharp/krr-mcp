@@ -1,4 +1,4 @@
-"""Pytest configuration and shared fixtures for krr MCP Server tests."""
+"""Pytest configuration and shared fixtures for KRR MCP Server tests."""
 
 import asyncio
 from pathlib import Path

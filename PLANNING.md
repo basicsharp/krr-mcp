@@ -1,10 +1,10 @@
 
-# PLANNING.md - krr MCP Server Project
+# PLANNING.md - KRR MCP Server Project
 
 ## 1. Vision
 
 ### Project Purpose
-The krr MCP Server project aims to create a secure, user-controlled interface between AI assistants and Kubernetes resource optimization through the krr (Kubernetes Resource Recommender) tool. By implementing the Model Context Protocol (MCP), we enable AI assistants to safely analyze, recommend, and help apply resource optimizations while maintaining strict human oversight and approval workflows.
+The KRR MCP Server project aims to create a secure, user-controlled interface between AI assistants and Kubernetes resource optimization through the krr (Kubernetes Resource Recommender) tool. By implementing the Model Context Protocol (MCP), we enable AI assistants to safely analyze, recommend, and help apply resource optimizations while maintaining strict human oversight and approval workflows.
 
 ### Core Goals
 1. **Safety-First Design**: Every recommendation application requires explicit user confirmation
@@ -31,7 +31,7 @@ The krr MCP Server project aims to create a secure, user-controlled interface be
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   AI Assistant  │────▶│   MCP Protocol   │────▶│  krr MCP Server │
+│   AI Assistant  │────▶│   MCP Protocol   │────▶│  KRR MCP Server │
 │   (Claude/etc)  │◀────│    Interface     │◀────│   (FastMCP)     │
 └─────────────────┘     └──────────────────┘     └────────┬────────┘
                                                            │

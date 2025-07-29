@@ -1,4 +1,4 @@
-"""Recommender module for krr MCP Server.
+"""Recommender module for KRR MCP Server.
 
 This module handles integration with the krr CLI tool:
 - Async subprocess execution for krr commands

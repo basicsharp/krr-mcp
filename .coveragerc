@@ -1,4 +1,4 @@
-# Coverage configuration for krr MCP Server
+# Coverage configuration for KRR MCP Server
 [run]
 source = src
 omit = 
@@ -42,7 +42,7 @@ sort = Cover
 
 [html]
 directory = htmlcov
-title = krr MCP Server Coverage Report
+title = KRR MCP Server Coverage Report
 
 [xml]
 output = test-reports/coverage.xml

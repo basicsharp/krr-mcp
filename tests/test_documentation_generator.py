@@ -215,7 +215,7 @@ class TestToolDocumentationGenerator:
         content = doc_generator._generate_markdown_content(documentation)
         
         # Verify content structure
-        assert "# krr MCP Server API Reference" in content
+        assert "# KRR MCP Server API Reference" in content
         assert "## ⚠️ SAFETY NOTICE" in content
         assert "## Available Tools" in content
         

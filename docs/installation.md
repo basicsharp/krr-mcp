@@ -1,6 +1,6 @@
 # Installation Guide
 
-Complete installation instructions for the krr MCP Server, including all prerequisites and configuration options.
+Complete installation instructions for the KRR MCP Server, including all prerequisites and configuration options.
 
 ## 📋 Prerequisites
 
@@ -219,7 +219,7 @@ safety:
 
 ## 🔐 RBAC Setup
 
-The krr MCP Server requires specific Kubernetes permissions:
+The KRR MCP Server requires specific Kubernetes permissions:
 
 ### ServiceAccount and ClusterRole
 
@@ -363,7 +363,7 @@ uv run pytest --cov=src --cov-report=html
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
    - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-2. **Add krr MCP Server configuration:**
+2. **Add KRR MCP Server configuration:**
 ```json
 {
   "mcpServers": {
@@ -509,4 +509,4 @@ After successful installation:
 
 ---
 
-**⚠️ Important**: Always test the installation with non-production clusters first. The krr MCP Server can modify cluster resources when given proper permissions. 
+**⚠️ Important**: Always test the installation with non-production clusters first. The KRR MCP Server can modify cluster resources when given proper permissions. 

@@ -1,4 +1,4 @@
-"""Safety module for krr MCP Server.
+"""Safety module for KRR MCP Server.
 
 This module provides comprehensive safety controls for Kubernetes resource modifications:
 - User confirmation workflows

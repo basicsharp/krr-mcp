@@ -1,9 +1,9 @@
-# krr MCP Server
+# KRR MCP Server
 
-A safety-first MCP (Model Context Protocol) server that enables AI assistants to safely analyze and optimize Kubernetes resource usage through [krr (Kubernetes Resource Recommender)](https://github.com/robusta-dev/krr).
+A safety-first MCP (Model Context Protocol) server that enables AI assistants to safely analyze and optimize Kubernetes resource usage through awesome [krr (Kubernetes Resource Recommender)](https://github.com/robusta-dev/krr).
 
-[![Test Coverage](https://github.com/your-org/krr-mcp/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/your-org/krr-mcp/actions/workflows/test-coverage.yml)
-[![Security Scan](https://github.com/your-org/krr-mcp/actions/workflows/security.yml/badge.svg)](https://github.com/your-org/krr-mcp/actions/workflows/security.yml)
+[![Test Coverage](https://github.com/basicsharp/krr-mcp/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/basicsharp/krr-mcp/actions/workflows/test-coverage.yml)
+[![Security Scan](https://github.com/basicsharp/krr-mcp/actions/workflows/security.yml/badge.svg)](https://github.com/basicsharp/krr-mcp/actions/workflows/security.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 ## 🚨 Safety First
@@ -19,7 +19,7 @@ This server implements bulletproof safety controls:
 
 ## 🎯 What This Does
 
-The krr MCP Server bridges AI assistants (like Claude) with Kubernetes optimization:
+The KRR MCP Server bridges AI assistants (like Claude) with Kubernetes optimization:
 
 1. **📊 Analyze Resource Usage**: Get krr recommendations through natural language
 2. **🔍 Preview Changes**: See exactly what would change before applying
@@ -214,7 +214,7 @@ uv run pytest --cov=src --cov-report=html
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   AI Assistant  │────▶│   MCP Protocol   │────▶│  krr MCP Server │
+│   AI Assistant  │────▶│   MCP Protocol   │────▶│  KRR MCP Server │
 │   (Claude/etc)  │◀────│    Interface     │◀────│   (FastMCP)     │
 └─────────────────┘     └──────────────────┘     └────────┬────────┘
                                                            │
@@ -280,7 +280,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 4. 📊 **Monitor after changes**
 5. 🛡️ **Use production namespace protections**
 
-The krr MCP Server is designed to make AI-assisted Kubernetes optimization both **powerful** and **safe**. Every feature prioritizes preventing accidental damage while enabling intelligent resource management.
+The KRR MCP Server is designed to make AI-assisted Kubernetes optimization both **powerful** and **safe**. Every feature prioritizes preventing accidental damage while enabling intelligent resource management.
 
 ---
 

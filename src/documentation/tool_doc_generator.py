@@ -296,7 +296,7 @@ class ToolDocumentationGenerator:
         """Generate documentation for safety features."""
         return {
             "overview": (
-                "The krr MCP Server implements comprehensive safety controls to prevent "
+                "The KRR MCP Server implements comprehensive safety controls to prevent "
                 "accidental cluster damage while enabling AI-assisted optimization."
             ),
             "safety_levels": {
@@ -496,7 +496,7 @@ class ToolDocumentationGenerator:
         openapi_spec = {
             "openapi": "3.0.0",
             "info": {
-                "title": "krr MCP Server API",
+                "title": "KRR MCP Server API",
                 "version": documentation["metadata"]["version"],
                 "description": documentation["metadata"]["description"],
             },
@@ -538,7 +538,7 @@ class ToolDocumentationGenerator:
     
     def _generate_markdown_content(self, documentation: Dict[str, Any]) -> str:
         """Generate main Markdown documentation content."""
-        content = f"""# krr MCP Server API Reference
+        content = f"""# KRR MCP Server API Reference
 
 Generated on: {documentation['metadata']['generated_at']}
 
@@ -588,7 +588,7 @@ Generated on: {documentation['metadata']['generated_at']}
     
     def _generate_safety_markdown(self, safety_features: Dict[str, Any]) -> str:
         """Generate safety guide Markdown content."""
-        content = f"""# krr MCP Server Safety Guide
+        content = f"""# KRR MCP Server Safety Guide
 
 {safety_features['overview']}
 
@@ -614,7 +614,7 @@ Generated on: {documentation['metadata']['generated_at']}
     
     def _generate_examples_markdown(self, examples: Dict[str, Any]) -> str:
         """Generate usage examples Markdown content."""
-        content = "# krr MCP Server Usage Examples\n\n"
+        content = "# KRR MCP Server Usage Examples\n\n"
         
         # Basic workflow
         workflow = examples["basic_workflow"]

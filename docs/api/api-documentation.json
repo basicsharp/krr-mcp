@@ -334,7 +334,7 @@
     }
   },
   "safety_features": {
-    "overview": "The krr MCP Server implements comprehensive safety controls to prevent accidental cluster damage while enabling AI-assisted optimization.",
+    "overview": "The KRR MCP Server implements comprehensive safety controls to prevent accidental cluster damage while enabling AI-assisted optimization.",
     "safety_levels": {
       "read_only": {
         "description": "Tools that only read cluster data without making changes",
