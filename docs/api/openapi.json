@@ -1,0 +1,437 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "krr MCP Server API",
+    "version": "1.0.0",
+    "description": "MCP server for safe Kubernetes resource optimization using krr"
+  },
+  "paths": {
+    "/tools/scan_recommendations": {
+      "post": {
+        "summary": "Scan Kubernetes cluster for resource optimization recommendations",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "query",
+            "description": "Kubernetes namespace to analyze (optional, all if not specified)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "strategy",
+            "in": "query",
+            "description": "krr strategy to use (simple, medium, aggressive)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "simple",
+                "medium",
+                "aggressive"
+              ]
+            }
+          },
+          {
+            "name": "resource_filter",
+            "in": "query",
+            "description": "Filter resources by name pattern (optional)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with recommendations and metadata",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "recommendations": {
+                      "type": "array",
+                      "description": "List of optimization recommendations"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "description": "Scan metadata and statistics"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "description": "Summary of potential savings"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/preview_changes": {
+      "post": {
+        "summary": "Preview what changes would be made without applying them",
+        "parameters": [
+          {
+            "name": "recommendations",
+            "in": "query",
+            "description": "List of recommendations to preview",
+            "required": true,
+            "schema": {
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with change preview and impact analysis",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "preview": {
+                      "type": "object",
+                      "description": "Detailed change preview"
+                    },
+                    "next_steps": {
+                      "type": "array",
+                      "description": "Recommended next steps"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/request_confirmation": {
+      "post": {
+        "summary": "Request user confirmation for proposed changes",
+        "parameters": [
+          {
+            "name": "changes",
+            "in": "query",
+            "description": "Detailed description of proposed changes",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "risk_level",
+            "in": "query",
+            "description": "Risk level (low, medium, high, critical)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "default": "medium"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with confirmation prompt and token",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "confirmation_required": {
+                      "type": "boolean"
+                    },
+                    "confirmation_token": {
+                      "type": "string",
+                      "description": "Token for applying changes"
+                    },
+                    "confirmation_prompt": {
+                      "type": "string",
+                      "description": "Human-readable confirmation prompt"
+                    },
+                    "safety_assessment": {
+                      "type": "object",
+                      "description": "Risk assessment details"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/apply_recommendations": {
+      "post": {
+        "summary": "Apply approved recommendations to the cluster",
+        "parameters": [
+          {
+            "name": "confirmation_token",
+            "in": "query",
+            "description": "Valid confirmation token from user approval",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dry_run",
+            "in": "query",
+            "description": "If True, simulate changes without applying them",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with execution results and rollback information",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "transaction_id": {
+                      "type": "string"
+                    },
+                    "execution_status": {
+                      "type": "string"
+                    },
+                    "rollback_available": {
+                      "type": "boolean"
+                    },
+                    "audit_entry_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/rollback_changes": {
+      "post": {
+        "summary": "Rollback previously applied changes",
+        "parameters": [
+          {
+            "name": "rollback_id",
+            "in": "query",
+            "description": "ID of the changes to rollback (rollback_snapshot_id)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "confirmation_token",
+            "in": "query",
+            "description": "Valid confirmation token for rollback",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with rollback results",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "rollback_id": {
+                      "type": "string"
+                    },
+                    "rolled_back": {
+                      "type": "boolean"
+                    },
+                    "affected_resources": {
+                      "type": "array"
+                    },
+                    "audit_entry_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/get_safety_report": {
+      "post": {
+        "summary": "Generate safety assessment report for proposed changes",
+        "parameters": [
+          {
+            "name": "changes",
+            "in": "query",
+            "description": "Proposed changes to analyze",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with comprehensive safety report",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "safety_report": {
+                      "type": "object",
+                      "description": "Detailed safety assessment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/get_execution_history": {
+      "post": {
+        "summary": "Get history of previous executions and their status",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of history entries to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "operation_filter",
+            "in": "query",
+            "description": "Filter by operation type (optional)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status_filter",
+            "in": "query",
+            "description": "Filter by status (optional)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Dictionary with execution history",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "error"
+                      ]
+                    },
+                    "history": {
+                      "type": "array",
+                      "description": "List of historical executions"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    },
+                    "filters_applied": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "ConfirmationToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Confirmation-Token",
+        "description": "Required for cluster modification operations"
+      }
+    }
+  }
+}
