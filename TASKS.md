@@ -48,31 +48,31 @@
 - [ ] Create health check endpoint for server monitoring
 - [x] Write basic unit tests for core server functionality
 
-## Milestone 3: krr CLI Integration
+## Milestone 3: krr CLI Integration ✅ COMPLETED
 **Goal**: Create robust integration with krr for fetching recommendations
 
 ### Tasks:
-- [ ] Create `src/recommender/krr_client.py` for krr CLI wrapper
-- [ ] Implement async subprocess execution for krr commands
-- [ ] Add krr command builder with proper argument handling:
-  - [ ] Support for different strategies (simple, medium, aggressive)
-  - [ ] Namespace filtering options
-  - [ ] Output format configuration (JSON)
-  - [ ] Prometheus URL configuration
-- [ ] Create recommendation parser for krr JSON output
-- [ ] Implement error handling for krr CLI failures:
-  - [ ] Missing krr installation
-  - [ ] Invalid Kubernetes context
-  - [ ] Prometheus connectivity issues
-- [ ] Add recommendation caching with TTL
-- [ ] Create data models for recommendations using Pydantic
-- [ ] Implement recommendation filtering by:
-  - [ ] Resource type (CPU/Memory)
-  - [ ] Namespace
-  - [ ] Workload name
-  - [ ] Severity/impact level
-- [ ] Add krr version compatibility checking
-- [ ] Write integration tests with mock krr responses
+- [x] Create `src/recommender/krr_client.py` for krr CLI wrapper
+- [x] Implement async subprocess execution for krr commands
+- [x] Add krr command builder with proper argument handling:
+  - [x] Support for different strategies (simple, medium, aggressive)
+  - [x] Namespace filtering options
+  - [x] Output format configuration (JSON)
+  - [x] Prometheus URL configuration
+- [x] Create recommendation parser for krr JSON output
+- [x] Implement error handling for krr CLI failures:
+  - [x] Missing krr installation
+  - [x] Invalid Kubernetes context
+  - [x] Prometheus connectivity issues
+- [x] Add recommendation caching with TTL
+- [x] Create data models for recommendations using Pydantic
+- [x] Implement recommendation filtering by:
+  - [x] Resource type (CPU/Memory)
+  - [x] Namespace
+  - [x] Workload name
+  - [x] Severity/impact level
+- [x] Add krr version compatibility checking
+- [x] Write integration tests with mock krr responses
 - [ ] Create performance benchmarks for large cluster scans
 
 ## Milestone 4: Safety Module with Confirmation Workflows ✅ COMPLETED
@@ -118,72 +118,79 @@
 - [ ] Create bypass mechanism for emergency situations (with extra logging)
 - [ ] Add multi-level approval for high-impact changes
 
-## Milestone 5: Executor Module for Applying Changes
+## Milestone 5: Executor Module for Applying Changes 🚧 PARTIALLY COMPLETED
 **Goal**: Build safe execution system for applying recommendations
 
 ### Tasks:
-- [ ] Create `src/executor/kubectl_executor.py` for kubectl operations
-- [ ] Implement kubectl command builder for resource updates
-- [ ] Add execution modes:
-  - [ ] Single resource update
-  - [ ] Batch updates with progress tracking
+- [x] Create `src/executor/kubectl_executor.py` for kubectl operations
+- [x] Implement kubectl command builder for resource updates
+- [x] Add execution modes:
+  - [x] Single resource update
+  - [x] Batch updates with progress tracking
   - [ ] Staged rollout with canary approach
-- [ ] Create execution transaction system:
-  - [ ] Begin transaction
-  - [ ] Execute changes
-  - [ ] Commit or rollback
-- [ ] Implement robust error handling:
-  - [ ] Partial failure recovery
-  - [ ] Automatic rollback triggers
-  - [ ] Detailed error reporting
-- [ ] Add execution progress tracking:
-  - [ ] Real-time status updates
-  - [ ] Success/failure counters
-  - [ ] Estimated time remaining
+- [x] Create execution transaction system:
+  - [x] Begin transaction
+  - [x] Execute changes
+  - [x] Commit or rollback
+- [x] Implement robust error handling:
+  - [x] Partial failure recovery
+  - [x] Automatic rollback triggers
+  - [x] Detailed error reporting
+- [x] Add execution progress tracking:
+  - [x] Real-time status updates
+  - [x] Success/failure counters
+  - [x] Estimated time remaining
 - [ ] Create post-execution validation:
   - [ ] Verify changes were applied
   - [ ] Check resource health
   - [ ] Monitor for immediate issues
-- [ ] Implement execution history logging
-- [ ] Add kubectl context validation before execution
-- [ ] Create execution report generator
+- [x] Implement execution history logging
+- [x] Add kubectl context validation before execution
+- [x] Create execution report generator
 - [ ] Write integration tests with test cluster
 
-## Milestone 6: MCP Tools Implementation
+### Completed Features:
+- Basic kubectl executor with transaction support
+- Progress tracking and real-time callbacks
+- Comprehensive error handling and rollback snapshots  
+- Integration with safety module for confirmation workflows
+- Mock command support for testing
+
+## Milestone 6: MCP Tools Implementation ✅ COMPLETED
 **Goal**: Create MCP-compliant tools for AI assistant interaction
 
 ### Tasks:
-- [ ] Implement `scan_recommendations` tool:
-  - [ ] Input parameters: namespace, strategy, filters
-  - [ ] Output format: structured recommendation list
-  - [ ] Error handling for scan failures
-- [ ] Create `preview_changes` tool:
-  - [ ] Generate detailed change preview
-  - [ ] Show resource impact analysis
-  - [ ] Include safety warnings
-- [ ] Build `request_confirmation` tool:
-  - [ ] Present changes for approval
-  - [ ] Handle confirmation responses
-  - [ ] Support confirmation with conditions
-- [ ] Implement `apply_recommendations` tool:
-  - [ ] Require valid confirmation token
-  - [ ] Execute approved changes only
-  - [ ] Return execution results
-- [ ] Create `rollback_changes` tool:
-  - [ ] List available rollback points
-  - [ ] Execute rollback with confirmation
-  - [ ] Verify rollback success
-- [ ] Add `get_safety_report` tool:
-  - [ ] Analyze proposed changes
-  - [ ] Generate risk assessment
-  - [ ] Provide safety recommendations
-- [ ] Implement `get_execution_history` tool:
-  - [ ] Query past executions
-  - [ ] Filter by date/status/user
-  - [ ] Export audit reports
+- [x] Implement `scan_recommendations` tool:
+  - [x] Input parameters: namespace, strategy, filters
+  - [x] Output format: structured recommendation list
+  - [x] Error handling for scan failures
+- [x] Create `preview_changes` tool:
+  - [x] Generate detailed change preview
+  - [x] Show resource impact analysis
+  - [x] Include safety warnings
+- [x] Build `request_confirmation` tool:
+  - [x] Present changes for approval
+  - [x] Handle confirmation responses
+  - [x] Support confirmation with conditions
+- [x] Implement `apply_recommendations` tool:
+  - [x] Require valid confirmation token
+  - [x] Execute approved changes only
+  - [x] Return execution results
+- [x] Create `rollback_changes` tool:
+  - [x] List available rollback points
+  - [x] Execute rollback with confirmation
+  - [x] Verify rollback success
+- [x] Add `get_safety_report` tool:
+  - [x] Analyze proposed changes
+  - [x] Generate risk assessment
+  - [x] Provide safety recommendations
+- [x] Implement `get_execution_history` tool:
+  - [x] Query past executions
+  - [x] Filter by date/status/user
+  - [x] Export audit reports
+- [x] Write comprehensive tool tests
 - [ ] Create tool documentation generator
 - [ ] Add tool versioning support
-- [ ] Write comprehensive tool tests
 
 ## Milestone 7: Testing Suite Development
 **Goal**: Create comprehensive test coverage for safety-critical functionality
