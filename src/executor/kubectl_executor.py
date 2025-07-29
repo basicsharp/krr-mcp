@@ -10,7 +10,7 @@ import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import structlog
 import yaml
@@ -165,6 +165,13 @@ class KubectlExecutor:
             commands=commands,
             execution_mode=execution_mode,
             dry_run=dry_run,
+            started_at=None,
+            completed_at=None,
+            overall_status=ExecutionStatus.PENDING,
+            commands_completed=0,
+            commands_failed=0,
+            rollback_snapshot_id=None,
+            rollback_required=False,
         )
 
         self.logger.info(
@@ -217,7 +224,9 @@ class KubectlExecutor:
             resource_name=change.object_name,
             namespace=change.namespace,
             kubectl_args=kubectl_args,
+            manifest_content=None,
             dry_run=dry_run,
+            estimated_duration_seconds=None,
         )
 
     def _generate_resource_patch(self, change: ResourceChange) -> Dict[str, Any]:
@@ -251,7 +260,9 @@ class KubectlExecutor:
     async def execute_transaction(
         self,
         transaction: ExecutionTransaction,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[
+            Callable[[ExecutionTransaction, Dict[str, Any]], None]
+        ] = None,
     ) -> ExecutionTransaction:
         """Execute a transaction with progress tracking.
 
@@ -322,7 +333,9 @@ class KubectlExecutor:
     async def _execute_single_mode(
         self,
         transaction: ExecutionTransaction,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[
+            Callable[[ExecutionTransaction, Dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """Execute commands one by one (single mode)."""
         for i, command in enumerate(transaction.commands):
@@ -345,7 +358,7 @@ class KubectlExecutor:
             # Call progress callback if provided
             if progress_callback:
                 progress = transaction.calculate_progress()
-                await progress_callback(transaction, progress)
+                progress_callback(transaction, progress)
 
             # Stop on failure if configured to do so
             if (
@@ -362,7 +375,9 @@ class KubectlExecutor:
     async def _execute_batch_mode(
         self,
         transaction: ExecutionTransaction,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[
+            Callable[[ExecutionTransaction, Dict[str, Any]], None]
+        ] = None,
     ) -> None:
         """Execute all commands in parallel (batch mode)."""
         tasks = []
@@ -374,22 +389,27 @@ class KubectlExecutor:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for i, result in enumerate(results):
+            execution_result: ExecutionResult
             if isinstance(result, Exception):
                 # Convert exception to failed result
                 command = transaction.commands[i]
-                result = ExecutionResult(
+                execution_result = ExecutionResult(
                     command_id=command.command_id,
                     status=ExecutionStatus.FAILED,
                     started_at=datetime.now(timezone.utc),
                     completed_at=datetime.now(timezone.utc),
+                    duration_seconds=0.0,
                     exit_code=-1,
                     stderr=str(result),
                     error_message=f"Command execution failed: {str(result)}",
                 )
+            else:
+                # Type assertion since we know it's an ExecutionResult here
+                execution_result = result  # type: ignore[assignment]
 
-            transaction.command_results.append(result)
+            transaction.command_results.append(execution_result)
 
-            if result.is_successful():
+            if execution_result.is_successful():
                 transaction.commands_completed += 1
             else:
                 transaction.commands_failed += 1
@@ -397,7 +417,7 @@ class KubectlExecutor:
         # Call progress callback with final results
         if progress_callback:
             progress = transaction.calculate_progress()
-            await progress_callback(transaction, progress)
+            progress_callback(transaction, progress)
 
     async def _execute_single_command(self, command: KubectlCommand) -> ExecutionResult:
         """Execute a single kubectl command.
@@ -414,7 +434,10 @@ class KubectlExecutor:
             command_id=command.command_id,
             status=ExecutionStatus.IN_PROGRESS,
             started_at=started_at,
+            completed_at=None,
+            duration_seconds=None,
             exit_code=-1,
+            error_message=None,
         )
 
         try:
@@ -446,7 +469,7 @@ class KubectlExecutor:
                     command=str(command),
                 )
 
-            result.exit_code = process.returncode
+            result.exit_code = process.returncode or -1
             result.stdout = stdout.decode() if stdout else ""
             result.stderr = stderr.decode() if stderr else ""
             result.completed_at = datetime.now(timezone.utc)
@@ -619,7 +642,8 @@ class KubectlExecutor:
             stdout, stderr = await process.communicate()
 
             if process.returncode == 0 and stdout:
-                return json.loads(stdout.decode())
+                manifest: Dict[str, Any] = json.loads(stdout.decode())
+                return manifest
 
             return None
 

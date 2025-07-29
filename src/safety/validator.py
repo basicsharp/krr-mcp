@@ -5,7 +5,7 @@ to prevent dangerous cluster modifications.
 """
 
 import re
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import structlog
 
@@ -61,7 +61,7 @@ class SafetyConfig:
 class SafetyValidator:
     """Validates proposed changes for safety issues."""
 
-    def __init__(self, config: SafetyConfig = None):
+    def __init__(self, config: Optional[SafetyConfig] = None):
         """Initialize the safety validator.
 
         Args:
@@ -119,6 +119,7 @@ class SafetyValidator:
             warnings=warnings,
             total_cpu_change_percent=total_cpu_change,
             total_memory_change_percent=total_memory_change,
+            estimated_monthly_cost_change=None,  # TODO: Implement cost calculation
             high_impact_changes=high_impact_changes,
             critical_workloads_affected=critical_workloads,
             production_namespaces_affected=prod_namespaces,

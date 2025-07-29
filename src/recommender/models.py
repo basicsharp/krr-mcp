@@ -100,7 +100,7 @@ class KrrRecommendation(BaseModel):
 
     def calculate_impact(self) -> Dict[str, Any]:
         """Calculate the impact of applying this recommendation."""
-        impact = {
+        impact: Dict[str, Any] = {
             "cpu_change": None,
             "memory_change": None,
             "cpu_change_percent": None,
@@ -232,7 +232,7 @@ class KrrScanResult(BaseModel):
     def calculate_summary(self) -> None:
         """Calculate summary statistics from recommendations."""
         # Count by severity
-        severity_counts = {}
+        severity_counts: Dict[str, int] = {}
         total_savings = 0.0
 
         for rec in self.recommendations:

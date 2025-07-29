@@ -27,6 +27,7 @@ from .models import (
     KubernetesObject,
     PrometheusConnectionError,
     RecommendationFilter,
+    RecommendationSeverity,
     ResourceValue,
 )
 
@@ -360,14 +361,14 @@ class KrrClient:
 
                 raise KrrExecutionError(
                     f"krr command failed: {stderr_str}",
-                    exit_code=process.returncode,
+                    exit_code=process.returncode or -1,
                     stderr=stderr_str,
                 )
 
             if not stdout_str.strip():
                 raise KrrExecutionError(
                     "krr command produced no output",
-                    exit_code=process.returncode,
+                    exit_code=process.returncode or -1,
                     stderr=stderr_str,
                 )
 
@@ -437,6 +438,7 @@ class KrrClient:
                 analysis_period=history_duration,
                 recommendations=recommendations,
                 total_recommendations=len(recommendations),
+                potential_total_savings=None,  # Will be calculated in calculate_summary()
                 scan_duration_seconds=scan_duration,
                 krr_version=metadata.get("krr_version"),
             )
@@ -507,6 +509,7 @@ class KrrClient:
             current_limits=current_limits,
             recommended_requests=recommended_requests,
             recommended_limits=recommended_limits,
+            severity=RecommendationSeverity.MEDIUM,  # Default severity
             potential_savings=raw_rec.get("potential_savings"),
             confidence_score=raw_rec.get("confidence_score"),
             analysis_period=raw_rec.get("analysis_period"),
@@ -608,8 +611,12 @@ class KrrClient:
                 current_limits=ResourceValue(cpu="200m", memory="256Mi"),
                 recommended_requests=ResourceValue(cpu="250m", memory="256Mi"),
                 recommended_limits=ResourceValue(cpu="500m", memory="512Mi"),
+                severity=RecommendationSeverity.MEDIUM,
                 potential_savings=15.5,
                 confidence_score=0.85,
+                analysis_period="7d",
+                cpu_usage_percentile=95.0,
+                memory_usage_percentile=95.0,
             ),
             KrrRecommendation(
                 object=KubernetesObject(
@@ -621,8 +628,12 @@ class KrrClient:
                 current_limits=ResourceValue(cpu="2000m", memory="4Gi"),
                 recommended_requests=ResourceValue(cpu="750m", memory="1.5Gi"),
                 recommended_limits=ResourceValue(cpu="1500m", memory="3Gi"),
+                severity=RecommendationSeverity.HIGH,
                 potential_savings=45.0,
                 confidence_score=0.92,
+                analysis_period="7d",
+                cpu_usage_percentile=95.0,
+                memory_usage_percentile=95.0,
             ),
         ]
 
@@ -641,6 +652,7 @@ class KrrClient:
             analysis_period=history_duration,
             recommendations=mock_recommendations,
             total_recommendations=len(mock_recommendations),
+            potential_total_savings=None,  # Will be calculated in calculate_summary()
             scan_duration_seconds=2.5,
             krr_version="1.7.0-mock",
         )

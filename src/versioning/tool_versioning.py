@@ -49,7 +49,7 @@ class ToolVersion(BaseModel):
 class ToolVersionRegistry:
     """Registry for managing tool versions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the version registry."""
         self.tools: Dict[str, Dict[str, ToolVersion]] = {}
         self.logger = structlog.get_logger(self.__class__.__name__)
@@ -80,6 +80,8 @@ class ToolVersionRegistry:
             version=version,
             status=status,
             introduced_at=datetime.now(timezone.utc),
+            deprecated_at=None,
+            sunset_at=None,
             breaking_changes=breaking_changes or [],
             migration_notes=migration_notes,
             changelog=changelog or [],
@@ -298,7 +300,7 @@ def versioned_tool(
         )
 
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Check if client requested specific version
             requested_version = kwargs.pop("_tool_version", None)
 
@@ -360,9 +362,9 @@ def versioned_tool(
             return result
 
         # Add version metadata to function
-        wrapper._tool_version = version
-        wrapper._tool_name = func_tool_name
-        wrapper._version_info = version_registry.get_version_info(
+        wrapper._tool_version = version  # type: ignore[attr-defined]
+        wrapper._tool_name = func_tool_name  # type: ignore[attr-defined]
+        wrapper._version_info = version_registry.get_version_info(  # type: ignore[attr-defined]
             func_tool_name, version
         )
 
@@ -391,7 +393,7 @@ def check_version_compatibility(
     current_version = version_registry.get_current_version(tool_name)
     supported_versions = version_registry.get_supported_versions(tool_name)
 
-    result = {
+    result: Dict[str, Any] = {
         "compatible": True,
         "tool_name": tool_name,
         "current_version": current_version,
@@ -452,7 +454,7 @@ def get_version_migration_guide(
 
 
 # Initialize default versions for all MCP tools
-def initialize_default_versions():
+def initialize_default_versions() -> None:
     """Initialize default versions for all MCP tools."""
     tools_versions = {
         "scan_recommendations": {
@@ -523,9 +525,9 @@ def initialize_default_versions():
     for tool_name, tool_info in tools_versions.items():
         version_registry.register_version(
             tool_name=tool_name,
-            version=tool_info["version"],
+            version=str(tool_info["version"]),
             status=VersionStatus.CURRENT,
-            changelog=tool_info["changelog"],
+            changelog=list(tool_info["changelog"]),
         )
 
     logger.info(

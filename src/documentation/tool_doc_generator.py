@@ -18,7 +18,7 @@ logger = structlog.get_logger(__name__)
 class ToolDocumentationGenerator:
     """Generate comprehensive documentation for MCP tools."""
 
-    def __init__(self, server_instance, output_dir: Optional[Path] = None):
+    def __init__(self, server_instance: Any, output_dir: Optional[Path] = None) -> None:
         """Initialize the documentation generator.
 
         Args:
@@ -75,7 +75,7 @@ class ToolDocumentationGenerator:
 
     def _extract_tools_info(self) -> Dict[str, Any]:
         """Extract information about all registered MCP tools."""
-        tools_info = {}
+        tools_info: Dict[str, Any] = {}
 
         # Get tools from the FastMCP server instance
         # Note: This is a simplified approach - in a real implementation,
@@ -551,7 +551,7 @@ class ToolDocumentationGenerator:
 
     def _write_openapi_specification(self, documentation: Dict[str, Any]) -> None:
         """Write OpenAPI 3.0 specification."""
-        openapi_spec = {
+        openapi_spec: Dict[str, Any] = {
             "openapi": "3.0.0",
             "info": {
                 "title": "KRR MCP Server API",

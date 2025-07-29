@@ -133,16 +133,16 @@ class KrrMCPServer:
         self.logger = structlog.get_logger(self.__class__.__name__)
 
         # Initialize FastMCP server
-        self.mcp = FastMCP("krr-mcp-server")
+        self.mcp: FastMCP = FastMCP("krr-mcp-server")
 
         # Server state
         self._running = False
 
         # Initialize components
-        self.krr_client = None
-        self.confirmation_manager = None
-        self.kubectl_executor = None
-        self.doc_generator = None
+        self.krr_client: Optional[KrrClient] = None
+        self.confirmation_manager: Optional[ConfirmationManager] = None
+        self.kubectl_executor: Optional[KubectlExecutor] = None
+        self.doc_generator: Optional[ToolDocumentationGenerator] = None
 
         # Initialize async components
         asyncio.create_task(self._initialize_components())
@@ -263,7 +263,13 @@ class KrrMCPServer:
                 recommendations = scan_result.recommendations
                 if resource_filter:
                     filter_criteria = RecommendationFilter(
-                        object_name_pattern=resource_filter
+                        namespace=None,
+                        object_kind=None,
+                        object_name_pattern=resource_filter,
+                        resource_type=None,
+                        severity=None,
+                        min_potential_savings=None,
+                        min_confidence_score=None,
                     )
                     recommendations = self.krr_client.filter_recommendations(
                         scan_result, filter_criteria
@@ -384,6 +390,9 @@ class KrrMCPServer:
                             change_type=ChangeType.RESOURCE_INCREASE,  # Will be determined by impact
                             current_values=current.get("requests", {}),
                             proposed_values=recommended.get("requests", {}),
+                            cpu_change_percent=None,
+                            memory_change_percent=None,
+                            estimated_cost_impact=None,
                         )
 
                         # Calculate impact to determine change type
@@ -532,6 +541,9 @@ class KrrMCPServer:
                                     "cpu": change_data.get("proposed_cpu"),
                                     "memory": change_data.get("proposed_memory"),
                                 },
+                                cpu_change_percent=None,
+                                memory_change_percent=None,
+                                estimated_cost_impact=None,
                             )
                             change.calculate_impact()
                             resource_changes.append(change)
@@ -560,6 +572,9 @@ class KrrMCPServer:
                                 change_type=ChangeType.RESOURCE_INCREASE,
                                 current_values=current.get("requests", {}),
                                 proposed_values=recommended.get("requests", {}),
+                                cpu_change_percent=None,
+                                memory_change_percent=None,
+                                estimated_cost_impact=None,
                             )
                             change.calculate_impact()
 
@@ -662,7 +677,7 @@ class KrrMCPServer:
                 )
 
                 # Execute transaction
-                async def progress_callback(tx, progress):
+                def progress_callback(tx: Any, progress: Dict[str, Any]) -> None:
                     self.logger.info(
                         "Execution progress",
                         transaction_id=tx.transaction_id,
@@ -744,7 +759,7 @@ class KrrMCPServer:
                     result["failed_commands"] = [
                         {
                             "command_id": cmd.command_id,
-                            "error": cmd.error_message,
+                            "error": cmd.error_message or "Unknown error",
                         }
                         for cmd in failed_commands
                     ]
@@ -921,6 +936,9 @@ class KrrMCPServer:
                                     "cpu": change_data.get("proposed_cpu"),
                                     "memory": change_data.get("proposed_memory"),
                                 },
+                                cpu_change_percent=None,
+                                memory_change_percent=None,
+                                estimated_cost_impact=None,
                             )
                             change.calculate_impact()
                             resource_changes.append(change)
@@ -1188,7 +1206,7 @@ class KrrMCPServer:
                             "available_tools": list(version_registry.tools.keys()),
                         }
 
-                    tool_info = {
+                    tool_info: Dict[str, Any] = {
                         "tool_name": tool_name,
                         "current_version": current_version,
                         "supported_versions": supported_versions,
@@ -1211,7 +1229,10 @@ class KrrMCPServer:
                                 detail["deprecated_at"] = (
                                     version_info.deprecated_at.isoformat()
                                 )
-                                detail["migration_notes"] = version_info.migration_notes
+                                if version_info.migration_notes:
+                                    detail["migration_notes"] = (
+                                        version_info.migration_notes
+                                    )
 
                             if (
                                 include_deprecated
@@ -1270,7 +1291,7 @@ class KrrMCPServer:
             await self._validate_configuration()
 
             # Start the FastMCP server
-            await self.mcp.run()
+            await self.mcp.run()  # type: ignore[func-returns-value]
 
         except Exception as e:
             self.logger.error("Failed to start server", error=str(e), exc_info=True)
@@ -1357,7 +1378,7 @@ def create_app() -> typer.Typer:
         config = ServerConfig()
         server = KrrMCPServer(config)
 
-        async def run_validation():
+        async def run_validation() -> None:
             try:
                 await server._validate_configuration()
                 typer.echo("✅ Configuration validation passed")

@@ -73,6 +73,8 @@ class ConfirmationManager:
             expires_at=expires_at,
             changes=changes,
             safety_assessment=safety_assessment,
+            used=False,
+            used_at=None,
             user_context=user_context or {},
         )
 
@@ -87,6 +89,9 @@ class ConfirmationManager:
             changes=changes,
             confirmation_token_id=token.token_id,
             safety_assessment=safety_assessment,
+            rollback_info=None,
+            error_message=None,
+            error_details=None,
         )
         self._audit_log.append(audit_entry)
 
@@ -194,6 +199,9 @@ class ConfirmationManager:
             changes=token.changes,
             safety_assessment=token.safety_assessment,
             user_context=token.user_context,
+            rollback_info=None,
+            error_message=None,
+            error_details=None,
         )
         self._audit_log.append(audit_entry)
 
@@ -230,6 +238,7 @@ class ConfirmationManager:
             original_manifests=original_manifests,
             rollback_commands=rollback_commands,
             cluster_context=cluster_context,
+            affected_resources=[],  # Will be populated from original_manifests by validator
             expires_at=expires_at,
         )
 
@@ -515,7 +524,7 @@ class ConfirmationManager:
         Returns:
             Dictionary with change summary
         """
-        summary = {
+        summary: Dict[str, Any] = {
             "total_changes": len(changes),
             "by_kind": {},
             "by_namespace": {},

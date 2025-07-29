@@ -186,9 +186,11 @@ class ExecutionTransaction(BaseModel):
         if not completed_results:
             return None
 
-        avg_duration = sum(r.duration_seconds for r in completed_results) / len(
-            completed_results
-        )
+        avg_duration = sum(
+            r.duration_seconds
+            for r in completed_results
+            if r.duration_seconds is not None
+        ) / len(completed_results)
         remaining_commands = len(self.commands) - len(self.command_results)
 
         return avg_duration * remaining_commands if remaining_commands > 0 else 0
