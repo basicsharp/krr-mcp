@@ -136,7 +136,7 @@ class TestTransactionCreation:
         assert transaction.execution_mode == ExecutionMode.SINGLE
         assert transaction.dry_run is True
         assert len(transaction.commands) == 1
-        assert transaction.commands[0].object_name == "test-deployment"
+        assert transaction.commands[0].resource_name == "test-deployment"
         assert transaction.commands[0].namespace == "default"
 
     @pytest.mark.asyncio
@@ -477,11 +477,12 @@ class TestRollbackFunctionality:
         # Create sample commands for snapshot
         commands = [
             KubectlCommand(
-                object_name="test-deployment",
+                operation="patch",
+                resource_type="Deployment",
+                resource_name="test-deployment",
                 namespace="default",
-                object_kind="Deployment",
                 kubectl_args=["kubectl", "patch", "deployment", "test-deployment"],
-                patch_content='{"spec": {"replicas": 3}}',
+                manifest_content='{"spec": {"replicas": 3}}',
                 dry_run=False,
             )
         ]

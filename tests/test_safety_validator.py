@@ -1,7 +1,5 @@
 """Tests for safety validator."""
 
-import pytest
-
 from src.safety.models import ChangeType, ResourceChange, RiskLevel
 from src.safety.validator import SafetyConfig, SafetyValidator
 

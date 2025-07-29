@@ -1,7 +1,6 @@
 """Tests for tool versioning system."""
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 
 import pytest
 

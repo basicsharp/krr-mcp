@@ -1,16 +1,14 @@
 """Comprehensive tests for server MCP tools."""
 
 import asyncio
-import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.executor.models import (
     ExecutionMode,
     ExecutionReport,
-    ExecutionStatus,
     ExecutionTransaction,
 )
 from src.recommender.models import (
@@ -222,11 +220,10 @@ class TestPreviewChangesTool:
 
             mock_assessment = SafetyAssessment(
                 overall_risk_level=RiskLevel.HIGH,
-                total_changes=1,
-                high_risk_changes=1,
-                estimated_impact_score=0.8,
-                recommendations=["High resource increase requires careful review"],
-                change_assessments=[],
+                total_resources_affected=1,
+                high_impact_changes=1,
+                estimated_monthly_cost_change=800.0,
+                production_namespaces_affected=["production"],
             )
             mock_analyze.return_value = mock_assessment
 
@@ -237,7 +234,7 @@ class TestPreviewChangesTool:
             )
 
             assert assessment.overall_risk_level == RiskLevel.HIGH
-            assert assessment.high_risk_changes == 1
+            assert assessment.high_impact_changes == 1
 
 
 class TestRequestConfirmationTool:
@@ -404,7 +401,7 @@ class TestApplyRecommendationsTool:
         """Test apply recommendations with confirmation."""
         server = server_with_executor
 
-        changes = [
+        _changes = [
             ResourceChange(
                 object_name="test-deployment",
                 namespace="default",
@@ -465,12 +462,17 @@ class TestRollbackChangesTool:
         ) as mock_execute:
             mock_report = ExecutionReport(
                 transaction_id="rollback-transaction",
-                execution_mode=ExecutionMode.SINGLE,
-                execution_status=ExecutionStatus.COMPLETED,
-                started_at=datetime.now(timezone.utc),
-                completed_at=datetime.now(timezone.utc),
-                command_results=[],
-                dry_run=False,
+                total_commands=1,
+                successful_commands=1,
+                failed_commands=0,
+                total_duration_seconds=2.5,
+                resources_modified=[
+                    {"kind": "Deployment", "name": "test-app", "namespace": "default"}
+                ],
+                namespaces_affected=["default"],
+                command_summaries=[
+                    {"command": "rollback", "status": "completed", "duration": 2.5}
+                ],
             )
             mock_execute.return_value = mock_report
 
@@ -485,16 +487,16 @@ class TestRollbackChangesTool:
 
         from src.safety.models import RollbackSnapshot
 
-        # Mock snapshot retrieval
-        mock_snapshot = RollbackSnapshot(
+        # Mock snapshot retrieval - create RollbackSnapshot for validation
+        _mock_snapshot = RollbackSnapshot(
             snapshot_id="test-snapshot",
-            created_at=datetime.now(timezone.utc),
-            resources_snapshot=[
+            operation_id="test-operation",
+            confirmation_token_id="test-token",
+            original_manifests=[
                 {"kind": "Deployment", "metadata": {"name": "test-app"}}
             ],
-            kubectl_commands=["kubectl get deployment test-app -o yaml"],
-            execution_context="test-rollback",
             rollback_commands=["kubectl apply -f snapshot.yaml"],
+            cluster_context={"namespace": "default", "cluster": "test"},
         )
 
         # Test that components support rollback
@@ -537,23 +539,13 @@ class TestAnalyzeSafetyTool:
         with patch.object(
             server.confirmation_manager.safety_validator, "validate_changes"
         ) as mock_analyze:
-            from src.safety.models import ChangeAssessment, SafetyAssessment
+            from src.safety.models import SafetyAssessment
 
             mock_assessment = SafetyAssessment(
                 overall_risk_level=RiskLevel.LOW,
-                total_changes=1,
-                high_risk_changes=0,
-                estimated_impact_score=0.2,
-                recommendations=["Changes appear safe"],
-                change_assessments=[
-                    ChangeAssessment(
-                        change=changes[0],
-                        risk_level=RiskLevel.LOW,
-                        risk_factors=[],
-                        estimated_impact=0.2,
-                        recommendations=["Safe resource increase"],
-                    )
-                ],
+                total_resources_affected=1,
+                high_impact_changes=0,
+                estimated_monthly_cost_change=50.0,
             )
             mock_analyze.return_value = mock_assessment
 
@@ -564,8 +556,8 @@ class TestAnalyzeSafetyTool:
             )
 
             assert assessment.overall_risk_level == RiskLevel.LOW
-            assert assessment.total_changes == 1
-            assert len(assessment.change_assessments) == 1
+            assert assessment.total_resources_affected == 1
+            assert assessment.high_impact_changes == 0
 
     @pytest.mark.asyncio
     async def test_analyze_safety_production_namespace(self, server_with_safety):
@@ -589,23 +581,14 @@ class TestAnalyzeSafetyTool:
         with patch.object(
             server.confirmation_manager.safety_validator, "validate_changes"
         ) as mock_analyze:
-            from src.safety.models import ChangeAssessment, SafetyAssessment
+            from src.safety.models import SafetyAssessment
 
             mock_assessment = SafetyAssessment(
                 overall_risk_level=RiskLevel.MEDIUM,
-                total_changes=1,
-                high_risk_changes=0,
-                estimated_impact_score=0.6,
-                recommendations=["Production deployment requires extra caution"],
-                change_assessments=[
-                    ChangeAssessment(
-                        change=changes[0],
-                        risk_level=RiskLevel.MEDIUM,
-                        risk_factors=["production_namespace", "large_resource_change"],
-                        estimated_impact=0.6,
-                        recommendations=["Verify cluster capacity before applying"],
-                    )
-                ],
+                total_resources_affected=1,
+                high_impact_changes=1,
+                estimated_monthly_cost_change=200.0,
+                production_namespaces_affected=["production"],
             )
             mock_analyze.return_value = mock_assessment
 
@@ -616,7 +599,8 @@ class TestAnalyzeSafetyTool:
             )
 
             assert assessment.overall_risk_level == RiskLevel.MEDIUM
-            assert assessment.estimated_impact_score == 0.6
+            assert assessment.high_impact_changes == 1
+            assert "production" in assessment.production_namespaces_affected
 
 
 class TestQueryAuditLogsTool:
@@ -683,11 +667,11 @@ class TestGenerateDocumentationTool:
         # Test that documentation generator is available
         from src.documentation.tool_doc_generator import ToolDocumentationGenerator
 
-        doc_generator = ToolDocumentationGenerator()
+        doc_generator = ToolDocumentationGenerator(server)
         assert doc_generator is not None
 
         # Test that it can generate documentation
-        docs = doc_generator.generate_markdown()
+        docs = doc_generator.generate_markdown_content()
         assert isinstance(docs, str)
         assert len(docs) > 0
 
@@ -708,7 +692,7 @@ class TestGetVersionInfoTool:
     @pytest.mark.asyncio
     async def test_get_version_info_basic(self, server_with_versioning):
         """Test basic version info retrieval."""
-        server = server_with_versioning
+        _server = server_with_versioning
 
         # Test that version registry is available
         from src.versioning.tool_versioning import version_registry

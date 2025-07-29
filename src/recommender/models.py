@@ -15,7 +15,7 @@ class KrrStrategy(str, Enum):
     """krr recommendation strategies."""
 
     SIMPLE = "simple"
-    SIMPLE_LIMIT = "simple_limit"
+    SIMPLE_LIMIT = "simple-limit"
 
 
 class ResourceType(str, Enum):

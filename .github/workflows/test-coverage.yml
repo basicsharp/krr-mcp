@@ -16,7 +16,8 @@ jobs:
 
     env:
       PYTHONPATH: ${{ github.workspace }}/src
-      PYTEST_DISABLE_PLUGIN_AUTOLOAD: 1
+      # Removed PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 for better async support
+      PYTHONDONTWRITEBYTECODE: 1  # Skip .pyc files for faster startup
       CI: true
 
     steps:

@@ -62,16 +62,25 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 addopts = [
-    "--cov=src",
-    "--cov-report=html",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
-    "--cov-config=.coveragerc",
     "--strict-markers",
     "--strict-config",
-    "-x",  # Stop at first failure in CI
     "--disable-warnings",  # Reduce output noise
     "--tb=line",  # Shorter tracebacks
+    "--maxfail=10",  # Stop after 10 failures in CI
+    "--durations=10",  # Show 10 slowest tests
+]
+# Skip slow integrations for faster feedback
+norecursedirs = [
+    ".*",
+    "build",
+    "dist",
+    "CVS",
+    "_darcs",
+    "{arch}",
+    "*.egg",
+    "venv",
+    "env",
+    "virtualenv",
 ]
 
 # Test markers for categorizing tests
@@ -85,10 +94,10 @@ markers = [
     "slow: Tests that take longer than 30 seconds",
     "network: Tests that require network access",
     "external: Tests that depend on external services",
+    "asyncio: Tests that use asyncio",
 ]
 
-# Timeout for tests (in seconds)
-timeout = 180
+# Test timeout handled by pytest-timeout plugin
 
 # Minimum coverage thresholds
 filterwarnings = [

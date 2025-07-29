@@ -547,7 +547,7 @@ class TestMockResponseGeneration:
         namespaces = ["default", "production", "staging"]
 
         result = await mock_client._generate_mock_scan_result(
-            strategy=KrrStrategy.SIMPLE, namespace=namespaces
+            strategy=KrrStrategy.SIMPLE, namespace=namespaces, history_duration=7
         )
 
         assert isinstance(result, KrrScanResult)
@@ -560,7 +560,7 @@ class TestMockResponseGeneration:
 
         for strategy in strategies:
             result = await mock_client._generate_mock_scan_result(
-                strategy=strategy, namespace="default"
+                strategy=strategy, namespace="default", history_duration="7d"
             )
 
             assert isinstance(result, KrrScanResult)
@@ -742,7 +742,7 @@ class TestConfigurationHandling:
         client = KrrClient(mock_responses=True)
         assert client.mock_responses is True
 
-        client_real = KrrClient(mock_responses=True)
+        client_real = KrrClient(mock_responses=False)
         assert client_real.mock_responses is False
 
 
