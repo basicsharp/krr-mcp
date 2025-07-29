@@ -166,7 +166,7 @@ The server provides 9 MCP tools for comprehensive resource management:
 
 ### Kubernetes Integration
 - Works with any Kubernetes cluster
-- Supports all krr strategies (simple, medium, aggressive)
+- Supports all krr strategies (simple, simple_limit)
 - kubectl integration with transaction support
 - Prometheus-based recommendations
 
@@ -191,6 +191,24 @@ MAX_RESOURCE_CHANGE_PERCENT=500  # Maximum allowed change
 CRITICAL_WORKLOAD_PATTERNS=postgres,mysql,redis,controller,operator
 PRODUCTION_NAMESPACE_PATTERNS=prod,production,live
 ```
+
+## Supported KRR Algorithms
+
+KRR provides multiple strategies for calculating resource recommendations:
+
+#### Simple Strategy (default)
+By default, we use the _simple_ strategy (`krr simple`). It is calculated as follows (_The exact numbers can be customized in CLI arguments_):
+
+- **CPU**: Request at the 95th percentile, **limit unset** (allows unlimited bursting)
+- **Memory**: Maximum value over the past week + 15% buffer (same for request and limit)
+
+#### Simple-Limit Strategy
+The _simple-limit_ strategy (`krr simple_limit`) provides both CPU requests and limits:
+
+- **CPU**: Request and limit both set to configurable percentiles (default 95th percentile for both)
+- **Memory**: Maximum value over the past week + 15% buffer (same for request and limit)
+
+**Key difference**: The simple strategy leaves CPU limits unset to allow unlimited bursting, while simple-limit sets explicit CPU limits.
 
 ## 🧪 Testing
 

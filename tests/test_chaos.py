@@ -33,12 +33,12 @@ class TestNetworkInterruption:
         assert test_server.config.mock_kubectl_commands is True
 
         # Test error types are available
-        from src.executor.exceptions import KubectlError
-        from src.recommender.exceptions import KrrError, KrrTimeoutError
+        from src.executor.models import KubectlError, KubectlTimeoutError
+        from src.recommender.models import KrrError
 
-        assert KrrTimeoutError is not None
         assert KrrError is not None
         assert KubectlError is not None
+        assert KubectlTimeoutError is not None
 
     @pytest.mark.asyncio
     @pytest.mark.chaos
@@ -80,14 +80,12 @@ class TestNetworkInterruption:
         def create_sample_changes(index):
             return [
                 ResourceChange(
-                    resource_name=f"test-app-{index}",
+                    object_name=f"test-app-{index}",
                     namespace="default",
-                    resource_type="Deployment",
+                    object_kind="Deployment",
                     change_type="resource_increase",
-                    current_cpu="100m",
-                    current_memory="128Mi",
-                    proposed_cpu="200m",
-                    proposed_memory="256Mi",
+                    current_values={"cpu": "100m", "memory": "128Mi"},
+                    proposed_values={"cpu": "200m", "memory": "256Mi"},
                     cpu_change_percent=100.0,
                     memory_change_percent=100.0,
                 )
@@ -199,7 +197,7 @@ class TestExternalDependencyFailures:
         assert test_server.config.mock_krr_responses is True
 
         # Test that error handling components are available
-        from src.recommender.exceptions import KrrError, KrrNotFoundError
+        from src.recommender.models import KrrError, KrrNotFoundError
 
         assert KrrNotFoundError is not None
         assert KrrError is not None
@@ -219,7 +217,7 @@ class TestExternalDependencyFailures:
         assert test_server.config.mock_kubectl_commands is True
 
         # Test that error handling components are available
-        from src.executor.exceptions import KubectlError, KubectlNotFoundError
+        from src.executor.models import KubectlError, KubectlNotFoundError
 
         assert KubectlNotFoundError is not None
         assert KubectlError is not None
@@ -259,14 +257,12 @@ class TestCorruptedDataHandling:
         try:
             # Test with extreme values
             extreme_change = ResourceChange(
-                resource_name="test-app",
+                object_name="test-app",
                 namespace="default",
-                resource_type="Deployment",
+                object_kind="Deployment",
                 change_type="resource_increase",
-                current_cpu="invalid",
-                current_memory="invalid",
-                proposed_cpu="999999m",
-                proposed_memory="999999Mi",
+                current_values={"cpu": "invalid", "memory": "invalid"},
+                proposed_values={"cpu": "999999m", "memory": "999999Mi"},
                 cpu_change_percent=99999.0,
                 memory_change_percent=99999.0,
             )
@@ -314,14 +310,12 @@ class TestRaceConditions:
         # Create sample changes
         sample_changes = [
             ResourceChange(
-                resource_name="test-app",
+                object_name="test-app",
                 namespace="default",
-                resource_type="Deployment",
+                object_kind="Deployment",
                 change_type="resource_increase",
-                current_cpu="100m",
-                current_memory="128Mi",
-                proposed_cpu="200m",
-                proposed_memory="256Mi",
+                current_values={"cpu": "100m", "memory": "128Mi"},
+                proposed_values={"cpu": "200m", "memory": "256Mi"},
                 cpu_change_percent=100.0,
                 memory_change_percent=100.0,
             )

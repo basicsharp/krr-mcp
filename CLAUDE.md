@@ -317,6 +317,10 @@ When starting a new Claude Code session:
 
 Always read PLANNING.md at the start of every new conversation, check TASKS.md before starting your work, mark completed tasks to TASKS.md immediately, and add newly discovered tasks to TASKS.md when found.
 
+Remember that we use `uv` as main package manager, so you can use pytest via the following command: `uv run pytest`
+
+Try keeping only 2 latest session summaries here.
+
 Your primary objective is to build a server that makes it impossible for users to accidentally damage their clusters while still providing powerful optimization capabilities.
 
 ---
