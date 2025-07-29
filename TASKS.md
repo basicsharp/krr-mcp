@@ -152,7 +152,7 @@
 ### Completed Features:
 - Basic kubectl executor with transaction support
 - Progress tracking and real-time callbacks
-- Comprehensive error handling and rollback snapshots  
+- Comprehensive error handling and rollback snapshots
 - Integration with safety module for confirmation workflows
 - Mock command support for testing
 
@@ -316,7 +316,7 @@
     - [ ] Add uvx-specific documentation
     - [ ] Optimize package for uvx usage patterns
   - [ ] Debian/RPM packages
-  - [ ] Homebrew formula  
+  - [ ] Homebrew formula
   - [ ] Windows installer
 - [ ] Implement monitoring:
   - [ ] Prometheus metrics exposure

@@ -1,10 +1,10 @@
 
 # Product Requirements Document: KRR MCP Server
 
-**Version:** 1.0  
-**Date:** January 2025  
-**Status:** Draft  
-**Author:** MCP Integration Team  
+**Version:** 1.0
+**Date:** January 2025
+**Status:** Draft
+**Author:** MCP Integration Team
 
 ---
 
@@ -205,25 +205,25 @@ graph TB
         AI[AI Assistant]
         MCP[MCP Client]
     end
-    
+
     subgraph "MCP Server"
         API[MCP API Handler]
         CMD[Command Processor]
         VAL[Validator]
     end
-    
+
     subgraph "KRR Layer"
         KRR[krr CLI]
         STRAT[Strategy Engine]
         PROM[Prometheus Client]
     end
-    
+
     subgraph "Kubernetes"
         K8S[Kubernetes API]
         METRICS[Metrics Server]
         PODS[Workloads]
     end
-    
+
     AI --> MCP
     MCP --> API
     API --> CMD
@@ -475,7 +475,7 @@ groups:
     for: 5m
     annotations:
       summary: "KRR API latency is high"
-      
+
   - alert: KRRRecommendationFailures
     expr: rate(krr_errors_total[5m]) > 0.1
     for: 10m
@@ -536,16 +536,16 @@ groups:
 server:
   port: 8080
   host: 0.0.0.0
-  
+
 krr:
   prometheus_url: "${PROMETHEUS_URL}"
   default_history: "7d"
   default_strategy: "default"
-  
+
 auth:
   enabled: true
   type: "bearer"
-  
+
 logging:
   level: "INFO"
   format: "json"
@@ -557,7 +557,7 @@ class ConservativeStrategy(BaseStrategy):
     def calculate_cpu_request(self, metrics):
         # Use 95th percentile instead of 99th
         return percentile(metrics['cpu'], 95)
-    
+
     def calculate_memory_request(self, metrics):
         # Add 30% buffer instead of 20%
         return max(metrics['memory']) * 1.3

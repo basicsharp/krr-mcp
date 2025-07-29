@@ -88,18 +88,18 @@ The safety module is the most critical component. It must:
 2. **Generate clear confirmation prompts**
    ```
    RESOURCE OPTIMIZATION CONFIRMATION
-   
+
    The following changes will be applied to cluster 'production':
-   
+
    Deployment: web-app (namespace: default)
    - CPU Request: 100m → 250m (+150%)
    - Memory Request: 128Mi → 256Mi (+100%)
-   
+
    Impact Analysis:
    - Pods affected: 3
    - Potential restart required: Yes
    - Estimated monthly cost change: +$45
-   
+
    Do you want to proceed? (type 'yes' to confirm):
    ```
 
@@ -236,15 +236,15 @@ When working on this project:
 2. **Docstrings for all public methods**
    ```python
    """Apply resource recommendations to the cluster.
-   
+
    Args:
        recommendations: List of krr recommendations to apply
        confirmation_token: Valid confirmation token from request_confirmation
        dry_run: If True, simulate changes without applying
-       
+
    Returns:
        ExecutionResult with status and details
-       
+
    Raises:
        InvalidTokenError: If confirmation token is invalid/expired
        KubernetesError: If cluster operations fail
@@ -556,7 +556,7 @@ Extended the MCP server with 2 new tools and comprehensive versioning integratio
 **Files Created/Modified This Session**:
 - `src/documentation/__init__.py` - Documentation module initialization
 - `src/documentation/tool_doc_generator.py` - Complete documentation generation system
-- `src/versioning/__init__.py` - Versioning module initialization  
+- `src/versioning/__init__.py` - Versioning module initialization
 - `src/versioning/tool_versioning.py` - Complete version management system
 - `src/server.py` - Enhanced with documentation generator integration and 2 new MCP tools
 - `tests/test_documentation_generator.py` - Comprehensive documentation generator tests

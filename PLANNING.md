@@ -53,7 +53,7 @@ The KRR MCP Server project aims to create a secure, user-controlled interface be
 #### 1. MCP Server Core
 - **Responsibility**: Handle MCP protocol communication
 - **Interactions**: Receives commands from AI, routes to appropriate modules
-- **Key Methods**: 
+- **Key Methods**:
   - `handle_request()`: Process incoming MCP requests
   - `send_response()`: Format and return MCP responses
 
@@ -208,17 +208,17 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-  
+
   - repo: https://github.com/psf/black
     rev: 24.2.0
     hooks:
       - id: black
-  
+
   - repo: https://github.com/pycqa/isort
     rev: 5.13.0
     hooks:
       - id: isort
-  
+
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0
     hooks:
@@ -234,7 +234,7 @@ repos:
    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
    chmod +x ./kind
    sudo mv ./kind /usr/local/bin/kind
-   
+
    # Create test cluster
    kind create cluster --name krr-test
    ```
@@ -244,7 +244,7 @@ repos:
    # Install minikube
    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
    sudo install minikube-linux-amd64 /usr/local/bin/minikube
-   
+
    # Start cluster
    minikube start
    ```
@@ -267,7 +267,7 @@ helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
 # bandit for Python security
 pip install bandit
 
-# safety for dependency scanning  
+# safety for dependency scanning
 pip install safety
 
 # Run security checks

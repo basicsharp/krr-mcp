@@ -139,7 +139,7 @@ The server provides 9 MCP tools for comprehensive resource management:
 ## 📖 Documentation
 
 - **[Installation Guide](docs/installation.md)** - Complete setup instructions
-- **[User Guide](docs/user-guide.md)** - How to use with AI assistants  
+- **[User Guide](docs/user-guide.md)** - How to use with AI assistants
 - **[API Reference](docs/api/README.md)** - Complete tool documentation
 - **[Safety Guide](docs/safety.md)** - Understanding safety features
 - **[Deployment Guide](docs/deployment.md)** - Production deployment
@@ -234,7 +234,7 @@ uv run pytest --cov=src --cov-report=html
 ## 📊 Project Status
 
 - ✅ **Milestone 1-4**: Foundation, Safety, and Core Features
-- ✅ **Milestone 6**: Complete MCP Tools Implementation  
+- ✅ **Milestone 6**: Complete MCP Tools Implementation
 - ✅ **Milestone 7**: Comprehensive Testing Suite
 - 🚧 **Milestone 8**: Documentation (In Progress)
 - ⏳ **Milestone 9**: Deployment and Distribution
@@ -259,6 +259,37 @@ pre-commit install
 uv run python scripts/run_tests.py
 ```
 
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality and consistency. The hooks automatically run the same checks as our GitHub Actions workflow.
+
+**Install pre-commit hooks:**
+```bash
+# Install dependencies
+uv sync --group dev
+
+# Install pre-commit hooks
+uv run pre-commit install
+```
+
+**Available hooks:**
+- **Code formatting**: Black and isort
+- **Linting**: Flake8 (critical errors only)
+- **Security**: Bandit security scanner
+- **File maintenance**: Trailing whitespace, end-of-file fixes
+- **Format validation**: YAML, JSON, TOML
+
+**Manual execution:**
+```bash
+# Run on all files
+uv run pre-commit run --all-files
+
+# Run on staged files only
+uv run pre-commit run
+```
+
+The hooks will automatically fix formatting issues and prevent commits that fail quality checks.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -275,7 +306,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **This tool can modify your Kubernetes cluster resources.** Always:
 
 1. 🧪 **Test in non-production first**
-2. 📋 **Review all confirmations carefully** 
+2. 📋 **Review all confirmations carefully**
 3. 🔄 **Keep rollback capabilities ready**
 4. 📊 **Monitor after changes**
 5. 🛡️ **Use production namespace protections**

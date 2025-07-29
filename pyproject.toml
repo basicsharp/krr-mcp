@@ -74,7 +74,7 @@ addopts = [
 # Test markers for categorizing tests
 markers = [
     "unit: Unit tests for individual components",
-    "integration: Integration tests for complete workflows", 
+    "integration: Integration tests for complete workflows",
     "performance: Performance and load tests",
     "chaos: Chaos engineering and failure scenario tests",
     "coverage: Coverage analysis and reporting tests",
