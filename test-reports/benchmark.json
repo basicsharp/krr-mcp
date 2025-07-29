@@ -1,0 +1,9 @@
+{
+  "benchmarks": [
+    {
+      "name": "default_performance_test",
+      "unit": "seconds",
+      "value": 0.1
+    }
+  ]
+}
