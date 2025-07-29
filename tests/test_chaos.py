@@ -96,9 +96,9 @@ class TestNetworkInterruption:
         for i in range(5):
             task = asyncio.create_task(
                 asyncio.to_thread(
-                    test_server.confirmation_manager.create_confirmation_token,
+                    test_server.confirmation_manager.request_confirmation,
                     changes=create_sample_changes(i),
-                    risk_level="low",
+                    user_context={"risk_level": "low"},
                 )
             )
             tasks.append(task)
@@ -222,8 +222,8 @@ class TestExternalDependencyFailures:
         assert KubectlNotFoundError is not None
         assert KubectlError is not None
 
-        # Test rollback capabilities exist
-        assert hasattr(test_server.kubectl_executor, "create_rollback_snapshot")
+        # Test transaction capabilities exist (which include rollback)
+        assert hasattr(test_server.kubectl_executor, "execute_transaction")
 
     @pytest.mark.asyncio
     @pytest.mark.chaos

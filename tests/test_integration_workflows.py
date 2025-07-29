@@ -142,7 +142,7 @@ class TestFullRecommendationWorkflow:
         # Verify rollback components are available
         from datetime import datetime, timezone
 
-        from src.executor.models import RollbackSnapshot
+        from src.safety.models import RollbackSnapshot
 
         # Test creating a mock rollback snapshot
         snapshot = RollbackSnapshot(
