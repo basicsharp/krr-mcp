@@ -1,0 +1,51 @@
+# Coverage configuration for krr MCP Server
+[run]
+source = src
+omit = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+    setup.py
+    conftest.py
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods, they aren't run:
+    @(abc\.)?abstractmethod
+
+# Minimum coverage percentage
+fail_under = 90
+
+# Show missing lines in terminal output
+show_missing = True
+
+# Sort report by coverage percentage
+sort = Cover
+
+[html]
+directory = htmlcov
+title = krr MCP Server Coverage Report
+
+[xml]
+output = test-reports/coverage.xml
+
+[json]
+output = test-reports/coverage.json

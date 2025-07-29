@@ -61,7 +61,39 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
-addopts = "--cov=src --cov-report=html --cov-report=term-missing"
+addopts = [
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-config=.coveragerc",
+    "--strict-markers",
+    "--strict-config",
+]
+
+# Test markers for categorizing tests
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests for complete workflows", 
+    "performance: Performance and load tests",
+    "chaos: Chaos engineering and failure scenario tests",
+    "coverage: Coverage analysis and reporting tests",
+    "safety_critical: Safety-critical functionality tests (require 95%+ coverage)",
+    "slow: Tests that take longer than 30 seconds",
+    "network: Tests that require network access",
+    "external: Tests that depend on external services",
+]
+
+# Timeout for tests (in seconds)
+timeout = 300
+
+# Minimum coverage thresholds
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning:pkg_resources.*",
+    "ignore::PendingDeprecationWarning",
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -79,4 +111,6 @@ dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
+    "pytest-timeout>=2.1.0",
+    "psutil>=5.9.0",
 ]
