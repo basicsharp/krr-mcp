@@ -18,32 +18,42 @@ logger = structlog.get_logger(__name__)
 
 class VersionStatus(Enum):
     """Version status indicators."""
+
     CURRENT = "current"
-    SUPPORTED = "supported" 
+    SUPPORTED = "supported"
     DEPRECATED = "deprecated"
     UNSUPPORTED = "unsupported"
 
 
 class ToolVersion(BaseModel):
     """Tool version information."""
+
     version: str = Field(description="Semantic version string (e.g., '1.0.0')")
     status: VersionStatus = Field(description="Version status")
     introduced_at: datetime = Field(description="When this version was introduced")
-    deprecated_at: Optional[datetime] = Field(None, description="When this version was deprecated")
-    sunset_at: Optional[datetime] = Field(None, description="When this version will be removed")
-    breaking_changes: List[str] = Field(default_factory=list, description="List of breaking changes")
-    migration_notes: Optional[str] = Field(None, description="Migration guidance for upgrading")
+    deprecated_at: Optional[datetime] = Field(
+        None, description="When this version was deprecated"
+    )
+    sunset_at: Optional[datetime] = Field(
+        None, description="When this version will be removed"
+    )
+    breaking_changes: List[str] = Field(
+        default_factory=list, description="List of breaking changes"
+    )
+    migration_notes: Optional[str] = Field(
+        None, description="Migration guidance for upgrading"
+    )
     changelog: List[str] = Field(default_factory=list, description="Version changelog")
 
 
 class ToolVersionRegistry:
     """Registry for managing tool versions."""
-    
+
     def __init__(self):
         """Initialize the version registry."""
         self.tools: Dict[str, Dict[str, ToolVersion]] = {}
         self.logger = structlog.get_logger(self.__class__.__name__)
-    
+
     def register_version(
         self,
         tool_name: str,
@@ -54,7 +64,7 @@ class ToolVersionRegistry:
         changelog: Optional[List[str]] = None,
     ) -> None:
         """Register a new version for a tool.
-        
+
         Args:
             tool_name: Name of the MCP tool
             version: Semantic version string
@@ -65,7 +75,7 @@ class ToolVersionRegistry:
         """
         if tool_name not in self.tools:
             self.tools[tool_name] = {}
-        
+
         tool_version = ToolVersion(
             version=version,
             status=status,
@@ -74,16 +84,16 @@ class ToolVersionRegistry:
             migration_notes=migration_notes,
             changelog=changelog or [],
         )
-        
+
         self.tools[tool_name][version] = tool_version
-        
+
         self.logger.info(
             "Registered tool version",
             tool_name=tool_name,
             version=version,
             status=status.value,
         )
-    
+
     def deprecate_version(
         self,
         tool_name: str,
@@ -92,7 +102,7 @@ class ToolVersionRegistry:
         migration_notes: Optional[str] = None,
     ) -> None:
         """Mark a tool version as deprecated.
-        
+
         Args:
             tool_name: Name of the MCP tool
             version: Version to deprecate
@@ -103,114 +113,122 @@ class ToolVersionRegistry:
             tool_version = self.tools[tool_name][version]
             tool_version.status = VersionStatus.DEPRECATED
             tool_version.deprecated_at = datetime.now(timezone.utc)
-            
+
             if sunset_date:
                 tool_version.sunset_at = sunset_date
-            
+
             if migration_notes:
                 tool_version.migration_notes = migration_notes
-            
+
             self.logger.warning(
                 "Tool version deprecated",
                 tool_name=tool_name,
                 version=version,
                 sunset_date=sunset_date.isoformat() if sunset_date else None,
             )
-    
+
     def get_version_info(self, tool_name: str, version: str) -> Optional[ToolVersion]:
         """Get version information for a tool.
-        
+
         Args:
             tool_name: Name of the MCP tool
             version: Version to query
-            
+
         Returns:
             ToolVersion object or None if not found
         """
         return self.tools.get(tool_name, {}).get(version)
-    
+
     def get_current_version(self, tool_name: str) -> Optional[str]:
         """Get the current version of a tool.
-        
+
         Args:
             tool_name: Name of the MCP tool
-            
+
         Returns:
             Current version string or None if not found
         """
         if tool_name not in self.tools:
             return None
-        
+
         for version, version_info in self.tools[tool_name].items():
             if version_info.status == VersionStatus.CURRENT:
                 return version
-        
+
         return None
-    
+
     def get_supported_versions(self, tool_name: str) -> List[str]:
         """Get all supported versions of a tool.
-        
+
         Args:
             tool_name: Name of the MCP tool
-            
+
         Returns:
             List of supported version strings
         """
         if tool_name not in self.tools:
             return []
-        
+
         supported_versions = []
         for version, version_info in self.tools[tool_name].items():
             if version_info.status in [VersionStatus.CURRENT, VersionStatus.SUPPORTED]:
                 supported_versions.append(version)
-        
+
         return sorted(supported_versions, reverse=True)  # Newest first
-    
+
     def is_version_supported(self, tool_name: str, version: str) -> bool:
         """Check if a tool version is supported.
-        
+
         Args:
             tool_name: Name of the MCP tool
             version: Version to check
-            
+
         Returns:
             True if version is supported
         """
         version_info = self.get_version_info(tool_name, version)
         if not version_info:
             return False
-        
+
         return version_info.status in [VersionStatus.CURRENT, VersionStatus.SUPPORTED]
-    
-    def get_deprecation_info(self, tool_name: str, version: str) -> Optional[Dict[str, Any]]:
+
+    def get_deprecation_info(
+        self, tool_name: str, version: str
+    ) -> Optional[Dict[str, Any]]:
         """Get deprecation information for a tool version.
-        
+
         Args:
             tool_name: Name of the MCP tool
             version: Version to check
-            
+
         Returns:
             Deprecation information or None
         """
         version_info = self.get_version_info(tool_name, version)
         if not version_info or version_info.status != VersionStatus.DEPRECATED:
             return None
-        
+
         return {
-            "deprecated_at": version_info.deprecated_at.isoformat() if version_info.deprecated_at else None,
-            "sunset_at": version_info.sunset_at.isoformat() if version_info.sunset_at else None,
+            "deprecated_at": (
+                version_info.deprecated_at.isoformat()
+                if version_info.deprecated_at
+                else None
+            ),
+            "sunset_at": (
+                version_info.sunset_at.isoformat() if version_info.sunset_at else None
+            ),
             "migration_notes": version_info.migration_notes,
             "current_version": self.get_current_version(tool_name),
         }
-    
+
     def get_all_tools_info(self) -> Dict[str, Any]:
         """Get complete version information for all tools.
-        
+
         Returns:
             Dictionary with all tools and their versions
         """
         tools_info = {}
-        
+
         for tool_name, versions in self.tools.items():
             tools_info[tool_name] = {
                 "current_version": self.get_current_version(tool_name),
@@ -219,8 +237,16 @@ class ToolVersionRegistry:
                     version: {
                         "status": version_info.status.value,
                         "introduced_at": version_info.introduced_at.isoformat(),
-                        "deprecated_at": version_info.deprecated_at.isoformat() if version_info.deprecated_at else None,
-                        "sunset_at": version_info.sunset_at.isoformat() if version_info.sunset_at else None,
+                        "deprecated_at": (
+                            version_info.deprecated_at.isoformat()
+                            if version_info.deprecated_at
+                            else None
+                        ),
+                        "sunset_at": (
+                            version_info.sunset_at.isoformat()
+                            if version_info.sunset_at
+                            else None
+                        ),
                         "breaking_changes": version_info.breaking_changes,
                         "migration_notes": version_info.migration_notes,
                         "changelog": version_info.changelog,
@@ -228,7 +254,7 @@ class ToolVersionRegistry:
                     for version, version_info in versions.items()
                 },
             }
-        
+
         return tools_info
 
 
@@ -245,7 +271,7 @@ def versioned_tool(
     changelog: Optional[List[str]] = None,
 ) -> Callable:
     """Decorator to add versioning support to MCP tools.
-    
+
     Args:
         version: Semantic version string
         tool_name: Name of the tool (auto-detected if not provided)
@@ -253,13 +279,14 @@ def versioned_tool(
         breaking_changes: List of breaking changes
         migration_notes: Migration guidance
         changelog: List of changes in this version
-        
+
     Returns:
         Decorated function with version support
     """
+
     def decorator(func: Callable) -> Callable:
         func_tool_name = tool_name or func.__name__
-        
+
         # Register the version
         version_registry.register_version(
             tool_name=func_tool_name,
@@ -269,34 +296,44 @@ def versioned_tool(
             migration_notes=migration_notes,
             changelog=changelog,
         )
-        
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Check if client requested specific version
-            requested_version = kwargs.pop('_tool_version', None)
-            
+            requested_version = kwargs.pop("_tool_version", None)
+
             if requested_version:
                 # Validate requested version
-                if not version_registry.is_version_supported(func_tool_name, requested_version):
+                if not version_registry.is_version_supported(
+                    func_tool_name, requested_version
+                ):
                     return {
                         "status": "error",
                         "error": f"Unsupported tool version: {requested_version}",
                         "error_code": "UNSUPPORTED_VERSION",
-                        "supported_versions": version_registry.get_supported_versions(func_tool_name),
-                        "current_version": version_registry.get_current_version(func_tool_name),
+                        "supported_versions": version_registry.get_supported_versions(
+                            func_tool_name
+                        ),
+                        "current_version": version_registry.get_current_version(
+                            func_tool_name
+                        ),
                     }
-                
+
                 # Check for deprecation warnings
-                version_info = version_registry.get_version_info(func_tool_name, requested_version)
+                version_info = version_registry.get_version_info(
+                    func_tool_name, requested_version
+                )
                 if version_info and version_info.status == VersionStatus.DEPRECATED:
-                    deprecation_info = version_registry.get_deprecation_info(func_tool_name, requested_version)
+                    deprecation_info = version_registry.get_deprecation_info(
+                        func_tool_name, requested_version
+                    )
                     logger.warning(
                         "Using deprecated tool version",
                         tool_name=func_tool_name,
                         version=requested_version,
                         **deprecation_info if deprecation_info else {},
                     )
-                    
+
                     # Add deprecation warning to response
                     result = await func(*args, **kwargs)
                     if isinstance(result, dict):
@@ -306,27 +343,31 @@ def versioned_tool(
                             "deprecation_info": deprecation_info,
                         }
                     return result
-            
+
             # Execute the tool function
             result = await func(*args, **kwargs)
-            
+
             # Add version information to response
             if isinstance(result, dict):
                 result["tool_version"] = {
                     "current": version,
                     "requested": requested_version or version,
-                    "supported_versions": version_registry.get_supported_versions(func_tool_name),
+                    "supported_versions": version_registry.get_supported_versions(
+                        func_tool_name
+                    ),
                 }
-            
+
             return result
-        
+
         # Add version metadata to function
         wrapper._tool_version = version
         wrapper._tool_name = func_tool_name
-        wrapper._version_info = version_registry.get_version_info(func_tool_name, version)
-        
+        wrapper._version_info = version_registry.get_version_info(
+            func_tool_name, version
+        )
+
         return wrapper
-    
+
     return decorator
 
 
@@ -337,19 +378,19 @@ def check_version_compatibility(
     max_version: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Check version compatibility for a tool.
-    
+
     Args:
         tool_name: Name of the MCP tool
         client_version: Version requested by client
         min_version: Minimum supported version
         max_version: Maximum supported version
-        
+
     Returns:
         Compatibility check results
     """
     current_version = version_registry.get_current_version(tool_name)
     supported_versions = version_registry.get_supported_versions(tool_name)
-    
+
     result = {
         "compatible": True,
         "tool_name": tool_name,
@@ -358,17 +399,19 @@ def check_version_compatibility(
         "warnings": [],
         "errors": [],
     }
-    
+
     if client_version:
         if not version_registry.is_version_supported(tool_name, client_version):
             result["compatible"] = False
             result["errors"].append(f"Unsupported version: {client_version}")
         else:
-            deprecation_info = version_registry.get_deprecation_info(tool_name, client_version)
+            deprecation_info = version_registry.get_deprecation_info(
+                tool_name, client_version
+            )
             if deprecation_info:
                 result["warnings"].append(f"Version {client_version} is deprecated")
                 result["deprecation_info"] = deprecation_info
-    
+
     return result
 
 
@@ -378,25 +421,25 @@ def get_version_migration_guide(
     to_version: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Get migration guide for upgrading tool versions.
-    
+
     Args:
         tool_name: Name of the MCP tool
         from_version: Current version
         to_version: Target version (current if not specified)
-        
+
     Returns:
         Migration guide or None if not available
     """
     target_version = to_version or version_registry.get_current_version(tool_name)
     if not target_version:
         return None
-    
+
     from_info = version_registry.get_version_info(tool_name, from_version)
     to_info = version_registry.get_version_info(tool_name, target_version)
-    
+
     if not from_info or not to_info:
         return None
-    
+
     return {
         "tool_name": tool_name,
         "from_version": from_version,
@@ -422,7 +465,7 @@ def initialize_default_versions():
             ],
         },
         "preview_changes": {
-            "version": "1.0.0", 
+            "version": "1.0.0",
             "changelog": [
                 "Initial implementation with safety assessment",
                 "Impact analysis and change preview",
@@ -476,7 +519,7 @@ def initialize_default_versions():
             ],
         },
     }
-    
+
     for tool_name, tool_info in tools_versions.items():
         version_registry.register_version(
             tool_name=tool_name,
@@ -484,7 +527,7 @@ def initialize_default_versions():
             status=VersionStatus.CURRENT,
             changelog=tool_info["changelog"],
         )
-    
+
     logger.info(
         "Initialized default tool versions",
         tools_count=len(tools_versions),

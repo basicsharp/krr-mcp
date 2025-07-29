@@ -40,13 +40,13 @@ def test_config() -> ServerConfig:
 async def test_server(test_config: ServerConfig) -> AsyncGenerator[KrrMCPServer, None]:
     """Create a test server instance."""
     server = KrrMCPServer(test_config)
-    
+
     # Mock the MCP server to avoid actual network operations
     server.mcp = Mock(spec=FastMCP)
     server.mcp.run = AsyncMock()
-    
+
     yield server
-    
+
     # Clean up
     await server.stop()
 
@@ -68,9 +68,9 @@ def mock_krr_response() -> Dict:
                         "memory": "256Mi",
                     },
                     "limits": {
-                        "cpu": "500m", 
+                        "cpu": "500m",
                         "memory": "512Mi",
-                    }
+                    },
                 },
                 "current": {
                     "requests": {
@@ -79,16 +79,16 @@ def mock_krr_response() -> Dict:
                     },
                     "limits": {
                         "cpu": "200m",
-                        "memory": "256Mi", 
-                    }
-                }
+                        "memory": "256Mi",
+                    },
+                },
             }
         ],
         "metadata": {
             "strategy": "simple",
             "timestamp": "2025-01-29T00:00:00Z",
             "cluster": "test-cluster",
-        }
+        },
     }
 
 
@@ -116,13 +116,13 @@ def mock_kubectl_dry_run() -> Dict:
                                 "limits": {
                                     "cpu": "500m",
                                     "memory": "512Mi",
-                                }
-                            }
+                                },
+                            },
                         }
                     ]
                 }
             }
-        }
+        },
     }
 
 
@@ -148,7 +148,7 @@ def dangerous_recommendations() -> Dict:
                         "cpu": "1000m",
                         "memory": "1Gi",
                     }
-                }
+                },
             }
         ]
     }
@@ -176,16 +176,16 @@ def caplog_structured(caplog):
 
 class MockAsyncProcess:
     """Mock async subprocess for testing external commands."""
-    
+
     def __init__(self, stdout: str = "", stderr: str = "", returncode: int = 0):
         self.stdout = stdout.encode() if isinstance(stdout, str) else stdout
         self.stderr = stderr.encode() if isinstance(stderr, str) else stderr
         self.returncode = returncode
-    
+
     async def communicate(self):
         """Mock communicate method."""
         return self.stdout, self.stderr
-    
+
     async def wait(self):
         """Mock wait method."""
         return self.returncode

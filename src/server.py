@@ -26,8 +26,8 @@ from .executor.kubectl_executor import KubectlExecutor
 from .recommender.krr_client import KrrClient
 from .recommender.models import KrrStrategy, RecommendationFilter
 from .safety.confirmation_manager import ConfirmationManager
-from .safety.models import ResourceChange, ChangeType
-from .versioning.tool_versioning import versioned_tool, version_registry, VersionStatus
+from .safety.models import ChangeType, ResourceChange
+from .versioning.tool_versioning import VersionStatus, version_registry, versioned_tool
 
 # Load environment variables
 load_dotenv()
@@ -56,112 +56,116 @@ logger = structlog.get_logger(__name__)
 
 class ServerConfig(BaseModel):
     """Configuration for the krr MCP server."""
-    
+
     # Kubernetes Configuration
     kubeconfig: Optional[str] = Field(
         default_factory=lambda: os.getenv("KUBECONFIG", "~/.kube/config"),
-        description="Path to kubeconfig file"
+        description="Path to kubeconfig file",
     )
     kubernetes_context: Optional[str] = Field(
         default_factory=lambda: os.getenv("KUBERNETES_CONTEXT"),
-        description="Kubernetes context to use"
+        description="Kubernetes context to use",
     )
-    
+
     # Prometheus Configuration
     prometheus_url: str = Field(
         default_factory=lambda: os.getenv("PROMETHEUS_URL", "http://localhost:9090"),
-        description="Prometheus server URL"
+        description="Prometheus server URL",
     )
-    
+
     # krr Configuration
     krr_strategy: str = Field(
         default_factory=lambda: os.getenv("KRR_STRATEGY", "simple"),
-        description="krr recommendation strategy"
+        description="krr recommendation strategy",
     )
     krr_history_duration: str = Field(
         default_factory=lambda: os.getenv("KRR_HISTORY_DURATION", "7d"),
-        description="Historical data duration for krr analysis"
+        description="Historical data duration for krr analysis",
     )
-    
+
     # Safety Configuration
     confirmation_timeout_seconds: int = Field(
         default_factory=lambda: int(os.getenv("CONFIRMATION_TIMEOUT_SECONDS", "300")),
-        description="Timeout for user confirmations in seconds"
+        description="Timeout for user confirmations in seconds",
     )
     max_resource_change_percent: int = Field(
         default_factory=lambda: int(os.getenv("MAX_RESOURCE_CHANGE_PERCENT", "500")),
-        description="Maximum allowed resource change percentage"
+        description="Maximum allowed resource change percentage",
     )
     rollback_retention_days: int = Field(
         default_factory=lambda: int(os.getenv("ROLLBACK_RETENTION_DAYS", "7")),
-        description="Days to retain rollback information"
+        description="Days to retain rollback information",
     )
-    
+
     # Development Settings
     development_mode: bool = Field(
-        default_factory=lambda: os.getenv("DEVELOPMENT_MODE", "false").lower() == "true",
-        description="Enable development mode with additional logging"
+        default_factory=lambda: os.getenv("DEVELOPMENT_MODE", "false").lower()
+        == "true",
+        description="Enable development mode with additional logging",
     )
     mock_krr_responses: bool = Field(
-        default_factory=lambda: os.getenv("MOCK_KRR_RESPONSES", "false").lower() == "true",
-        description="Use mock krr responses for testing"
+        default_factory=lambda: os.getenv("MOCK_KRR_RESPONSES", "false").lower()
+        == "true",
+        description="Use mock krr responses for testing",
     )
     mock_kubectl_commands: bool = Field(
-        default_factory=lambda: os.getenv("MOCK_KUBECTL_COMMANDS", "false").lower() == "true",
-        description="Mock kubectl commands for testing"
+        default_factory=lambda: os.getenv("MOCK_KUBECTL_COMMANDS", "false").lower()
+        == "true",
+        description="Mock kubectl commands for testing",
     )
 
 
 class KrrMCPServer:
     """Main KRR MCP Server implementation.
-    
+
     This server provides AI assistants with safe access to Kubernetes resource
     optimization through the krr tool. It implements comprehensive safety controls
     to prevent accidental cluster modifications.
     """
-    
+
     def __init__(self, config: ServerConfig):
         """Initialize the krr MCP server.
-        
+
         Args:
             config: Server configuration settings
         """
         self.config = config
         self.logger = structlog.get_logger(self.__class__.__name__)
-        
+
         # Initialize FastMCP server
         self.mcp = FastMCP("krr-mcp-server")
-        
+
         # Server state
         self._running = False
-        
+
         # Initialize components
         self.krr_client = None
         self.confirmation_manager = None
         self.kubectl_executor = None
         self.doc_generator = None
-        
+
         # Initialize async components
         asyncio.create_task(self._initialize_components())
-        
+
         # Register MCP tools
         self._register_tools()
-        
+
         self.logger.info(
             "KRR MCP Server initialized",
             prometheus_url=config.prometheus_url,
             krr_strategy=config.krr_strategy,
             development_mode=config.development_mode,
         )
-    
+
     async def _initialize_components(self) -> None:
         """Initialize async components (krr client, confirmation manager, kubectl executor)."""
         try:
             # Initialize confirmation manager
             self.confirmation_manager = ConfirmationManager(
-                confirmation_timeout_minutes=self.config.confirmation_timeout_seconds // 60
+                confirmation_timeout_minutes=self.config.confirmation_timeout_seconds
+                // 60
             )
-            
+
             # Initialize krr client
             self.krr_client = KrrClient(
                 kubeconfig_path=self.config.kubeconfig,
@@ -169,7 +173,7 @@ class KrrMCPServer:
                 prometheus_url=self.config.prometheus_url,
                 mock_responses=self.config.mock_krr_responses,
             )
-            
+
             # Initialize kubectl executor
             self.kubectl_executor = KubectlExecutor(
                 kubeconfig_path=self.config.kubeconfig,
@@ -177,19 +181,19 @@ class KrrMCPServer:
                 confirmation_manager=self.confirmation_manager,
                 mock_commands=self.config.mock_kubectl_commands,
             )
-            
+
             # Initialize documentation generator
             self.doc_generator = ToolDocumentationGenerator(self)
-            
+
             self.logger.info("Server components initialized successfully")
-            
+
         except Exception as e:
             self.logger.error("Failed to initialize server components", error=str(e))
             raise
-    
+
     def _register_tools(self) -> None:
         """Register MCP tools for AI assistant interaction."""
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -198,23 +202,23 @@ class KrrMCPServer:
                 "Support for all krr strategies (simple, medium, aggressive)",
                 "Namespace filtering and resource pattern matching",
                 "Comprehensive error handling and caching",
-            ]
+            ],
         )
         async def scan_recommendations(
             namespace: Optional[str] = None,
             strategy: Optional[str] = None,
-            resource_filter: Optional[str] = None
+            resource_filter: Optional[str] = None,
         ) -> Dict[str, Any]:
             """Scan Kubernetes cluster for resource optimization recommendations.
-            
+
             This tool uses krr to analyze cluster resource usage and generate
             optimization recommendations. It is read-only and safe to execute.
-            
+
             Args:
                 namespace: Kubernetes namespace to analyze (optional, all if not specified)
                 strategy: krr strategy to use (simple, medium, aggressive)
                 resource_filter: Filter resources by name pattern (optional)
-                
+
             Returns:
                 Dictionary with recommendations and metadata
             """
@@ -224,16 +228,16 @@ class KrrMCPServer:
                 strategy=strategy,
                 resource_filter=resource_filter,
             )
-            
+
             try:
                 # Ensure components are initialized
                 if not self.krr_client:
                     return {
                         "status": "error",
                         "error": "krr client not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Parse strategy
                 krr_strategy = KrrStrategy.SIMPLE
                 if strategy:
@@ -243,24 +247,28 @@ class KrrMCPServer:
                         return {
                             "status": "error",
                             "error": f"Invalid strategy: {strategy}. Valid options: simple, medium, aggressive",
-                            "error_code": "INVALID_STRATEGY"
+                            "error_code": "INVALID_STRATEGY",
                         }
                 else:
                     krr_strategy = KrrStrategy(self.config.krr_strategy.lower())
-                
+
                 # Perform krr scan
                 scan_result = await self.krr_client.scan_recommendations(
                     namespace=namespace,
                     strategy=krr_strategy,
                     history_duration=self.config.krr_history_duration,
                 )
-                
+
                 # Apply resource filter if specified
                 recommendations = scan_result.recommendations
                 if resource_filter:
-                    filter_criteria = RecommendationFilter(object_name_pattern=resource_filter)
-                    recommendations = self.krr_client.filter_recommendations(scan_result, filter_criteria)
-                
+                    filter_criteria = RecommendationFilter(
+                        object_name_pattern=resource_filter
+                    )
+                    recommendations = self.krr_client.filter_recommendations(
+                        scan_result, filter_criteria
+                    )
+
                 # Convert to JSON-serializable format
                 recommendations_data = [
                     {
@@ -277,7 +285,7 @@ class KrrMCPServer:
                             "limits": {
                                 "cpu": rec.current_limits.cpu,
                                 "memory": rec.current_limits.memory,
-                            }
+                            },
                         },
                         "recommended": {
                             "requests": {
@@ -287,7 +295,7 @@ class KrrMCPServer:
                             "limits": {
                                 "cpu": rec.recommended_limits.cpu,
                                 "memory": rec.recommended_limits.memory,
-                            }
+                            },
                         },
                         "impact": rec.calculate_impact(),
                         "potential_savings": rec.potential_savings,
@@ -296,7 +304,7 @@ class KrrMCPServer:
                     }
                     for rec in recommendations
                 ]
-                
+
                 return {
                     "status": "success",
                     "scan_id": scan_result.scan_id,
@@ -313,17 +321,17 @@ class KrrMCPServer:
                     "summary": {
                         "potential_total_savings": scan_result.potential_total_savings,
                         "recommendations_by_severity": scan_result.recommendations_by_severity,
-                    }
+                    },
                 }
-                
+
             except Exception as e:
                 self.logger.error("Failed to scan recommendations", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": getattr(e, 'error_code', 'SCAN_FAILED')
+                    "error_code": getattr(e, "error_code", "SCAN_FAILED"),
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -332,19 +340,19 @@ class KrrMCPServer:
                 "Impact analysis and change preview",
                 "Integration with safety validator",
                 "Risk level calculation and warnings",
-            ]
+            ],
         )
         async def preview_changes(
-            recommendations: List[Dict[str, Any]]
+            recommendations: List[Dict[str, Any]],
         ) -> Dict[str, Any]:
             """Preview what changes would be made without applying them.
-            
+
             This tool shows exactly what would change if recommendations were applied.
             It performs dry-run validation and impact analysis.
-            
+
             Args:
                 recommendations: List of recommendations to preview
-                
+
             Returns:
                 Dictionary with change preview and impact analysis
             """
@@ -352,15 +360,15 @@ class KrrMCPServer:
                 "Previewing changes",
                 recommendation_count=len(recommendations),
             )
-            
+
             try:
                 if not self.confirmation_manager:
                     return {
                         "status": "error",
                         "error": "Confirmation manager not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Convert recommendations to ResourceChange objects
                 changes = []
                 for rec in recommendations:
@@ -368,7 +376,7 @@ class KrrMCPServer:
                         obj_info = rec.get("object", {})
                         current = rec.get("current", {})
                         recommended = rec.get("recommended", {})
-                        
+
                         change = ResourceChange(
                             object_kind=obj_info.get("kind", "Unknown"),
                             object_name=obj_info.get("name", "Unknown"),
@@ -377,14 +385,14 @@ class KrrMCPServer:
                             current_values=current.get("requests", {}),
                             proposed_values=recommended.get("requests", {}),
                         )
-                        
+
                         # Calculate impact to determine change type
                         change.calculate_impact()
                         if change.cpu_change_percent and change.cpu_change_percent < 0:
                             change.change_type = ChangeType.RESOURCE_DECREASE
-                        
+
                         changes.append(change)
-                        
+
                     except Exception as e:
                         self.logger.warning(
                             "Failed to parse recommendation for preview",
@@ -392,17 +400,19 @@ class KrrMCPServer:
                             error=str(e),
                         )
                         continue
-                
+
                 if not changes:
                     return {
                         "status": "error",
                         "error": "No valid recommendations to preview",
-                        "error_code": "NO_VALID_RECOMMENDATIONS"
+                        "error_code": "NO_VALID_RECOMMENDATIONS",
                     }
-                
+
                 # Perform safety assessment
-                safety_assessment = self.confirmation_manager.safety_validator.validate_changes(changes)
-                
+                safety_assessment = (
+                    self.confirmation_manager.safety_validator.validate_changes(changes)
+                )
+
                 # Generate preview data
                 preview_data = {
                     "total_resources_affected": len(changes),
@@ -437,10 +447,12 @@ class KrrMCPServer:
                             "recommendation": warning.recommendation,
                             "affected_object": warning.affected_object,
                         }
-                        for warning in safety_assessment.warnings[:10]  # Limit to first 10
-                    ]
+                        for warning in safety_assessment.warnings[
+                            :10
+                        ]  # Limit to first 10
+                    ],
                 }
-                
+
                 return {
                     "status": "success",
                     "preview": preview_data,
@@ -448,17 +460,17 @@ class KrrMCPServer:
                         "Review the safety assessment and warnings",
                         "Use 'request_confirmation' tool to proceed with changes",
                         "Consider gradual rollout for high-risk changes",
-                    ]
+                    ],
                 }
-                
+
             except Exception as e:
                 self.logger.error("Failed to preview changes", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "PREVIEW_FAILED"
+                    "error_code": "PREVIEW_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -467,41 +479,42 @@ class KrrMCPServer:
                 "Human-readable confirmation prompts",
                 "Safety assessment integration",
                 "Complete audit trail support",
-            ]
+            ],
         )
         async def request_confirmation(
-            changes: Dict[str, Any],
-            risk_level: str = "medium"
+            changes: Dict[str, Any], risk_level: str = "medium"
         ) -> Dict[str, Any]:
             """Request user confirmation for proposed changes.
-            
+
             SAFETY CRITICAL: This tool must be called before any cluster modifications.
             It presents changes clearly and generates a confirmation token.
-            
+
             Args:
                 changes: Detailed description of proposed changes (can be from preview_changes)
                 risk_level: Risk level (low, medium, high, critical)
-                
+
             Returns:
                 Dictionary with confirmation prompt and token
             """
             self.logger.info(
                 "Requesting confirmation",
                 risk_level=risk_level,
-                changes_count=len(changes.get("changes", [])) if isinstance(changes, dict) else 0,
+                changes_count=(
+                    len(changes.get("changes", [])) if isinstance(changes, dict) else 0
+                ),
             )
-            
+
             try:
                 if not self.confirmation_manager:
                     return {
                         "status": "error",
                         "error": "Confirmation manager not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Parse changes - handle both direct recommendation list and preview format
                 resource_changes = []
-                
+
                 if isinstance(changes, dict) and "changes" in changes:
                     # Changes from preview_changes format
                     for change_data in changes["changes"]:
@@ -523,17 +536,23 @@ class KrrMCPServer:
                             change.calculate_impact()
                             resource_changes.append(change)
                         except Exception as e:
-                            self.logger.warning("Failed to parse change", change=change_data, error=str(e))
+                            self.logger.warning(
+                                "Failed to parse change",
+                                change=change_data,
+                                error=str(e),
+                            )
                             continue
                 else:
                     # Direct recommendation format (list)
-                    recommendations = changes if isinstance(changes, list) else [changes]
+                    recommendations = (
+                        changes if isinstance(changes, list) else [changes]
+                    )
                     for rec in recommendations:
                         try:
                             obj_info = rec.get("object", {})
                             current = rec.get("current", {})
                             recommended = rec.get("recommended", {})
-                            
+
                             change = ResourceChange(
                                 object_kind=obj_info.get("kind", "Unknown"),
                                 object_name=obj_info.get("name", "Unknown"),
@@ -543,41 +562,45 @@ class KrrMCPServer:
                                 proposed_values=recommended.get("requests", {}),
                             )
                             change.calculate_impact()
-                            
-                            if change.cpu_change_percent and change.cpu_change_percent < 0:
+
+                            if (
+                                change.cpu_change_percent
+                                and change.cpu_change_percent < 0
+                            ):
                                 change.change_type = ChangeType.RESOURCE_DECREASE
-                            
+
                             resource_changes.append(change)
                         except Exception as e:
-                            self.logger.warning("Failed to parse recommendation", rec=rec, error=str(e))
+                            self.logger.warning(
+                                "Failed to parse recommendation", rec=rec, error=str(e)
+                            )
                             continue
-                
+
                 if not resource_changes:
                     return {
                         "status": "error",
                         "error": "No valid changes to confirm",
-                        "error_code": "NO_VALID_CHANGES"
+                        "error_code": "NO_VALID_CHANGES",
                     }
-                
+
                 # Request confirmation from safety module
-                confirmation_result = await self.confirmation_manager.request_confirmation(
-                    resource_changes,
-                    user_context={"requested_risk_level": risk_level}
+                confirmation_result = (
+                    await self.confirmation_manager.request_confirmation(
+                        resource_changes,
+                        user_context={"requested_risk_level": risk_level},
+                    )
                 )
-                
-                return {
-                    "status": "success",
-                    **confirmation_result
-                }
-                
+
+                return {"status": "success", **confirmation_result}
+
             except Exception as e:
                 self.logger.error("Failed to request confirmation", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "CONFIRMATION_REQUEST_FAILED"
+                    "error_code": "CONFIRMATION_REQUEST_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -586,21 +609,20 @@ class KrrMCPServer:
                 "Transaction-based execution with rollback support",
                 "Progress tracking and real-time callbacks",
                 "Comprehensive error handling and recovery",
-            ]
+            ],
         )
         async def apply_recommendations(
-            confirmation_token: str,
-            dry_run: bool = False
+            confirmation_token: str, dry_run: bool = False
         ) -> Dict[str, Any]:
             """Apply approved recommendations to the cluster.
-            
+
             SAFETY CRITICAL: This tool modifies cluster resources and must only
             be called with a valid confirmation token from request_confirmation.
-            
+
             Args:
                 confirmation_token: Valid confirmation token from user approval
                 dry_run: If True, simulate changes without applying them
-                
+
             Returns:
                 Dictionary with execution results and rollback information
             """
@@ -609,34 +631,36 @@ class KrrMCPServer:
                 confirmation_token=confirmation_token,
                 dry_run=dry_run,
             )
-            
+
             try:
                 if not self.confirmation_manager or not self.kubectl_executor:
                     return {
                         "status": "error",
                         "error": "Required components not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Consume confirmation token (validates and marks as used)
-                token = self.confirmation_manager.consume_confirmation_token(confirmation_token)
+                token = self.confirmation_manager.consume_confirmation_token(
+                    confirmation_token
+                )
                 if not token:
                     return {
                         "status": "error",
                         "error": "Invalid or expired confirmation token",
-                        "error_code": "INVALID_TOKEN"
+                        "error_code": "INVALID_TOKEN",
                     }
-                
+
                 # Create execution transaction
                 from .executor.models import ExecutionMode
-                
+
                 transaction = await self.kubectl_executor.create_transaction(
                     changes=token.changes,
                     confirmation_token_id=confirmation_token,
                     execution_mode=ExecutionMode.SINGLE,  # Use single mode for safety
                     dry_run=dry_run,
                 )
-                
+
                 # Execute transaction
                 async def progress_callback(tx, progress):
                     self.logger.info(
@@ -646,18 +670,24 @@ class KrrMCPServer:
                         completed=progress["completed"],
                         failed=progress["failed"],
                     )
-                
+
                 executed_transaction = await self.kubectl_executor.execute_transaction(
                     transaction,
                     progress_callback=progress_callback,
                 )
-                
+
                 # Generate execution report
-                execution_report = self.kubectl_executor.generate_execution_report(executed_transaction)
-                
+                execution_report = self.kubectl_executor.generate_execution_report(
+                    executed_transaction
+                )
+
                 # Log operation result in audit trail
-                operation_status = "completed" if executed_transaction.overall_status.value == "completed" else "failed"
-                
+                operation_status = (
+                    "completed"
+                    if executed_transaction.overall_status.value == "completed"
+                    else "failed"
+                )
+
                 audit_entry_id = self.confirmation_manager.log_operation_result(
                     operation="apply_recommendations",
                     status=operation_status,
@@ -668,15 +698,23 @@ class KrrMCPServer:
                         "commands_failed": executed_transaction.commands_failed,
                         "dry_run": dry_run,
                     },
-                    rollback_info={
-                        "rollback_snapshot_id": executed_transaction.rollback_snapshot_id,
-                        "rollback_required": executed_transaction.rollback_required,
-                    } if executed_transaction.rollback_snapshot_id else None,
+                    rollback_info=(
+                        {
+                            "rollback_snapshot_id": executed_transaction.rollback_snapshot_id,
+                            "rollback_required": executed_transaction.rollback_required,
+                        }
+                        if executed_transaction.rollback_snapshot_id
+                        else None
+                    ),
                 )
-                
+
                 # Prepare response
                 result = {
-                    "status": "success" if executed_transaction.overall_status.value == "completed" else "error",
+                    "status": (
+                        "success"
+                        if executed_transaction.overall_status.value == "completed"
+                        else "error"
+                    ),
                     "transaction_id": executed_transaction.transaction_id,
                     "dry_run": dry_run,
                     "execution_status": executed_transaction.overall_status.value,
@@ -687,18 +725,22 @@ class KrrMCPServer:
                     "namespaces_affected": execution_report.namespaces_affected,
                     "audit_entry_id": audit_entry_id,
                 }
-                
+
                 # Add rollback information if available
                 if executed_transaction.rollback_snapshot_id:
                     result["rollback_available"] = True
-                    result["rollback_snapshot_id"] = executed_transaction.rollback_snapshot_id
+                    result["rollback_snapshot_id"] = (
+                        executed_transaction.rollback_snapshot_id
+                    )
                 else:
                     result["rollback_available"] = False
-                
+
                 # Add error information if failed
                 if executed_transaction.overall_status.value == "failed":
                     failed_commands = executed_transaction.get_failed_commands()
-                    result["error_summary"] = f"{len(failed_commands)} command(s) failed"
+                    result["error_summary"] = (
+                        f"{len(failed_commands)} command(s) failed"
+                    )
                     result["failed_commands"] = [
                         {
                             "command_id": cmd.command_id,
@@ -706,15 +748,15 @@ class KrrMCPServer:
                         }
                         for cmd in failed_commands
                     ]
-                    
+
                     if executed_transaction.rollback_required:
                         result["recommendations"] = [
                             "Consider using 'rollback_changes' tool to revert changes",
                             "Review failed commands and cluster state",
                         ]
-                
+
                 return result
-                
+
             except Exception as e:
                 # Log error in audit trail
                 if self.confirmation_manager:
@@ -725,14 +767,14 @@ class KrrMCPServer:
                         error_message=str(e),
                         error_details={"exception_type": type(e).__name__},
                     )
-                
+
                 self.logger.error("Failed to apply recommendations", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "EXECUTION_FAILED"
+                    "error_code": "EXECUTION_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -741,21 +783,20 @@ class KrrMCPServer:
                 "Confirmation requirement for safety",
                 "Complete audit trail integration",
                 "Automatic cleanup of expired snapshots",
-            ]
+            ],
         )
         async def rollback_changes(
-            rollback_id: str,
-            confirmation_token: str
+            rollback_id: str, confirmation_token: str
         ) -> Dict[str, Any]:
             """Rollback previously applied changes.
-            
+
             SAFETY CRITICAL: This tool modifies cluster resources to restore
             previous state. Requires confirmation even for rollback operations.
-            
+
             Args:
                 rollback_id: ID of the changes to rollback (rollback_snapshot_id)
                 confirmation_token: Valid confirmation token for rollback
-                
+
             Returns:
                 Dictionary with rollback results
             """
@@ -764,33 +805,37 @@ class KrrMCPServer:
                 rollback_id=rollback_id,
                 confirmation_token=confirmation_token,
             )
-            
+
             try:
                 if not self.confirmation_manager:
                     return {
                         "status": "error",
                         "error": "Confirmation manager not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Validate confirmation token (for rollback safety)
-                validation_result = self.confirmation_manager.validate_confirmation_token(confirmation_token)
+                validation_result = (
+                    self.confirmation_manager.validate_confirmation_token(
+                        confirmation_token
+                    )
+                )
                 if not validation_result["valid"]:
                     return {
                         "status": "error",
                         "error": validation_result["error"],
-                        "error_code": validation_result["error_code"]
+                        "error_code": validation_result["error_code"],
                     }
-                
+
                 # Get rollback snapshot
                 snapshot = self.confirmation_manager.get_rollback_snapshot(rollback_id)
                 if not snapshot:
                     return {
                         "status": "error",
                         "error": "Rollback snapshot not found or expired",
-                        "error_code": "ROLLBACK_NOT_FOUND"
+                        "error_code": "ROLLBACK_NOT_FOUND",
                     }
-                
+
                 # Log rollback operation
                 audit_entry_id = self.confirmation_manager.log_operation_result(
                     operation="rollback_changes",
@@ -800,9 +845,9 @@ class KrrMCPServer:
                         "rollback_snapshot_id": rollback_id,
                         "rollback_commands": snapshot.rollback_commands,
                         "affected_resources": snapshot.affected_resources,
-                    }
+                    },
                 )
-                
+
                 return {
                     "status": "success",
                     "rollback_id": rollback_id,
@@ -810,17 +855,17 @@ class KrrMCPServer:
                     "affected_resources": snapshot.affected_resources,
                     "rollback_commands_executed": len(snapshot.rollback_commands),
                     "audit_entry_id": audit_entry_id,
-                    "message": "Rollback completed successfully (mocked for safety)"
+                    "message": "Rollback completed successfully (mocked for safety)",
                 }
-                
+
             except Exception as e:
                 self.logger.error("Failed to rollback changes", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "ROLLBACK_FAILED"
+                    "error_code": "ROLLBACK_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -829,35 +874,35 @@ class KrrMCPServer:
                 "Multi-factor risk assessment",
                 "Production namespace protection",
                 "Critical workload detection",
-            ]
+            ],
         )
-        async def get_safety_report(
-            changes: Dict[str, Any]
-        ) -> Dict[str, Any]:
+        async def get_safety_report(changes: Dict[str, Any]) -> Dict[str, Any]:
             """Generate safety assessment report for proposed changes.
-            
+
             This tool analyzes proposed changes and provides risk assessment,
             safety warnings, and recommendations for safe execution.
-            
+
             Args:
                 changes: Proposed changes to analyze (same format as preview_changes)
-                
+
             Returns:
                 Dictionary with comprehensive safety report
             """
             self.logger.info(
                 "Generating safety report",
-                changes_count=len(changes.get("changes", [])) if isinstance(changes, dict) else 0,
+                changes_count=(
+                    len(changes.get("changes", [])) if isinstance(changes, dict) else 0
+                ),
             )
-            
+
             try:
                 if not self.confirmation_manager:
                     return {
                         "status": "error",
                         "error": "Confirmation manager not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Reuse the same parsing logic from preview_changes
                 resource_changes = []
                 if isinstance(changes, dict) and "changes" in changes:
@@ -881,17 +926,21 @@ class KrrMCPServer:
                             resource_changes.append(change)
                         except Exception:
                             continue
-                
+
                 if not resource_changes:
                     return {
                         "status": "error",
                         "error": "No valid changes to analyze",
-                        "error_code": "NO_VALID_CHANGES"
+                        "error_code": "NO_VALID_CHANGES",
                     }
-                
+
                 # Perform safety assessment
-                safety_assessment = self.confirmation_manager.safety_validator.validate_changes(resource_changes)
-                
+                safety_assessment = (
+                    self.confirmation_manager.safety_validator.validate_changes(
+                        resource_changes
+                    )
+                )
+
                 return {
                     "status": "success",
                     "safety_report": {
@@ -912,17 +961,17 @@ class KrrMCPServer:
                             }
                             for warning in safety_assessment.warnings
                         ],
-                    }
+                    },
                 }
-                
+
             except Exception as e:
                 self.logger.error("Failed to generate safety report", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "SAFETY_REPORT_FAILED"
+                    "error_code": "SAFETY_REPORT_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -931,23 +980,23 @@ class KrrMCPServer:
                 "Filtering by operation type and status",
                 "Pagination and limit support",
                 "Export capabilities for compliance",
-            ]
+            ],
         )
         async def get_execution_history(
             limit: int = 10,
             operation_filter: Optional[str] = None,
-            status_filter: Optional[str] = None
+            status_filter: Optional[str] = None,
         ) -> Dict[str, Any]:
             """Get history of previous executions and their status.
-            
+
             This tool provides audit trail information for compliance and
             troubleshooting purposes.
-            
+
             Args:
                 limit: Maximum number of history entries to return
                 operation_filter: Filter by operation type (optional)
-                status_filter: Filter by status (optional) 
-                
+                status_filter: Filter by status (optional)
+
             Returns:
                 Dictionary with execution history
             """
@@ -957,22 +1006,22 @@ class KrrMCPServer:
                 operation_filter=operation_filter,
                 status_filter=status_filter,
             )
-            
+
             try:
                 if not self.confirmation_manager:
                     return {
                         "status": "error",
                         "error": "Confirmation manager not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Get audit history from confirmation manager
                 history_entries = self.confirmation_manager.get_audit_history(
                     limit=limit,
                     operation_filter=operation_filter,
                     status_filter=status_filter,
                 )
-                
+
                 return {
                     "status": "success",
                     "history": history_entries,
@@ -981,40 +1030,39 @@ class KrrMCPServer:
                         "limit": limit,
                         "operation_filter": operation_filter,
                         "status_filter": status_filter,
-                    }
+                    },
                 }
-                
+
             except Exception as e:
                 self.logger.error("Failed to retrieve execution history", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "HISTORY_RETRIEVAL_FAILED"
+                    "error_code": "HISTORY_RETRIEVAL_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
             changelog=[
                 "Initial implementation with comprehensive API documentation",
-                "Automatic tool discovery and parameter extraction", 
+                "Automatic tool discovery and parameter extraction",
                 "Multiple output formats (Markdown, JSON, OpenAPI)",
                 "Safety features documentation and usage examples",
-            ]
+            ],
         )
         async def generate_documentation(
-            output_format: str = "markdown",
-            include_examples: bool = True
+            output_format: str = "markdown", include_examples: bool = True
         ) -> Dict[str, Any]:
             """Generate comprehensive documentation for all MCP tools.
-            
+
             This tool creates API reference documentation with usage examples,
             safety information, and complete parameter descriptions.
-            
+
             Args:
                 output_format: Documentation format (markdown, json, openapi)
                 include_examples: Whether to include usage examples
-                
+
             Returns:
                 Dictionary with generated documentation
             """
@@ -1023,18 +1071,18 @@ class KrrMCPServer:
                 output_format=output_format,
                 include_examples=include_examples,
             )
-            
+
             try:
                 if not self.doc_generator:
                     return {
                         "status": "error",
                         "error": "Documentation generator not initialized",
-                        "error_code": "COMPONENT_NOT_READY"
+                        "error_code": "COMPONENT_NOT_READY",
                     }
-                
+
                 # Generate full documentation
                 documentation = self.doc_generator.generate_full_documentation()
-                
+
                 if output_format.lower() == "json":
                     return {
                         "status": "success",
@@ -1046,41 +1094,53 @@ class KrrMCPServer:
                             "docs/api/safety-guide.md",
                             "docs/api/usage-examples.md",
                             "docs/api/openapi.json",
-                        ]
+                        ],
                     }
                 elif output_format.lower() == "openapi":
                     return {
-                        "status": "success", 
+                        "status": "success",
                         "openapi_spec": documentation,
                         "format": "openapi",
-                        "message": "OpenAPI 3.0 specification generated successfully"
+                        "message": "OpenAPI 3.0 specification generated successfully",
                     }
                 else:  # Default to markdown
                     return {
                         "status": "success",
                         "documentation_summary": {
                             "tools_documented": len(documentation.get("tools", {})),
-                            "safety_features": len(documentation.get("safety_features", {}).get("safety_guarantees", [])),
-                            "examples_included": len(documentation.get("examples", {}).get("basic_workflow", {}).get("steps", [])),
-                            "error_codes": len(documentation.get("error_codes", {}).get("error_codes", {})),
+                            "safety_features": len(
+                                documentation.get("safety_features", {}).get(
+                                    "safety_guarantees", []
+                                )
+                            ),
+                            "examples_included": len(
+                                documentation.get("examples", {})
+                                .get("basic_workflow", {})
+                                .get("steps", [])
+                            ),
+                            "error_codes": len(
+                                documentation.get("error_codes", {}).get(
+                                    "error_codes", {}
+                                )
+                            ),
                         },
                         "format": "markdown",
                         "files_generated": [
                             "docs/api/api-reference.md",
-                            "docs/api/safety-guide.md", 
+                            "docs/api/safety-guide.md",
                             "docs/api/usage-examples.md",
                         ],
-                        "message": "Documentation generated successfully in Markdown format"
+                        "message": "Documentation generated successfully in Markdown format",
                     }
-                
+
             except Exception as e:
                 self.logger.error("Failed to generate documentation", error=str(e))
                 return {
                     "status": "error",
                     "error": str(e),
-                    "error_code": "DOCUMENTATION_GENERATION_FAILED"
+                    "error_code": "DOCUMENTATION_GENERATION_FAILED",
                 }
-        
+
         @self.mcp.tool()
         @versioned_tool(
             version="1.0.0",
@@ -1089,21 +1149,20 @@ class KrrMCPServer:
                 "Support for deprecation warnings and migration guides",
                 "Backward compatibility checking",
                 "Tool version registry and management",
-            ]
+            ],
         )
         async def get_tool_versions(
-            tool_name: Optional[str] = None,
-            include_deprecated: bool = False
+            tool_name: Optional[str] = None, include_deprecated: bool = False
         ) -> Dict[str, Any]:
             """Get version information for MCP tools.
-            
+
             This tool provides version information, deprecation status,
             and migration guidance for all or specific MCP tools.
-            
+
             Args:
                 tool_name: Specific tool to query (optional, all tools if not specified)
                 include_deprecated: Whether to include deprecated versions
-                
+
             Returns:
                 Dictionary with version information and migration guidance
             """
@@ -1112,123 +1171,135 @@ class KrrMCPServer:
                 tool_name=tool_name,
                 include_deprecated=include_deprecated,
             )
-            
+
             try:
                 if tool_name:
                     # Get information for specific tool
                     current_version = version_registry.get_current_version(tool_name)
-                    supported_versions = version_registry.get_supported_versions(tool_name)
-                    
+                    supported_versions = version_registry.get_supported_versions(
+                        tool_name
+                    )
+
                     if not current_version:
                         return {
                             "status": "error",
                             "error": f"Tool '{tool_name}' not found in version registry",
                             "error_code": "TOOL_NOT_FOUND",
-                            "available_tools": list(version_registry.tools.keys())
+                            "available_tools": list(version_registry.tools.keys()),
                         }
-                    
+
                     tool_info = {
                         "tool_name": tool_name,
                         "current_version": current_version,
                         "supported_versions": supported_versions,
-                        "version_details": {}
+                        "version_details": {},
                     }
-                    
+
                     # Add detailed version information
                     for version in supported_versions:
-                        version_info = version_registry.get_version_info(tool_name, version)
+                        version_info = version_registry.get_version_info(
+                            tool_name, version
+                        )
                         if version_info:
                             detail = {
                                 "status": version_info.status.value,
                                 "introduced_at": version_info.introduced_at.isoformat(),
                                 "changelog": version_info.changelog,
                             }
-                            
+
                             if version_info.deprecated_at:
-                                detail["deprecated_at"] = version_info.deprecated_at.isoformat()
+                                detail["deprecated_at"] = (
+                                    version_info.deprecated_at.isoformat()
+                                )
                                 detail["migration_notes"] = version_info.migration_notes
-                            
-                            if include_deprecated or version_info.status != VersionStatus.DEPRECATED:
+
+                            if (
+                                include_deprecated
+                                or version_info.status != VersionStatus.DEPRECATED
+                            ):
                                 tool_info["version_details"][version] = detail
-                    
-                    return {
-                        "status": "success",
-                        "tool_info": tool_info
-                    }
+
+                    return {"status": "success", "tool_info": tool_info}
                 else:
                     # Get information for all tools
                     all_tools_info = version_registry.get_all_tools_info()
-                    
+
                     # Filter deprecated versions if requested
                     if not include_deprecated:
                         for tool, info in all_tools_info.items():
                             info["versions"] = {
-                                v: details for v, details in info["versions"].items()
+                                v: details
+                                for v, details in info["versions"].items()
                                 if details["status"] != "deprecated"
                             }
-                    
+
                     return {
                         "status": "success",
                         "all_tools": all_tools_info,
                         "summary": {
                             "total_tools": len(all_tools_info),
-                            "total_versions": sum(len(info["versions"]) for info in all_tools_info.values()),
+                            "total_versions": sum(
+                                len(info["versions"])
+                                for info in all_tools_info.values()
+                            ),
                             "include_deprecated": include_deprecated,
-                        }
+                        },
                     }
-                
+
             except Exception as e:
-                self.logger.error("Failed to retrieve tool version information", error=str(e))
+                self.logger.error(
+                    "Failed to retrieve tool version information", error=str(e)
+                )
                 return {
-                    "status": "error", 
+                    "status": "error",
                     "error": str(e),
-                    "error_code": "VERSION_RETRIEVAL_FAILED"
+                    "error_code": "VERSION_RETRIEVAL_FAILED",
                 }
-    
+
     async def start(self) -> None:
         """Start the MCP server."""
         if self._running:
             self.logger.warning("Server is already running")
             return
-        
+
         self._running = True
         self.logger.info("Starting KRR MCP Server")
-        
+
         try:
             # Validate configuration
             await self._validate_configuration()
-            
+
             # Start the FastMCP server
             await self.mcp.run()
-            
+
         except Exception as e:
             self.logger.error("Failed to start server", error=str(e), exc_info=True)
             self._running = False
             raise
-    
+
     async def stop(self) -> None:
         """Stop the MCP server."""
         if not self._running:
             return
-        
+
         self.logger.info("Stopping KRR MCP Server")
         self._running = False
-        
+
         # Clean up any resources if needed
-        if hasattr(self, 'confirmation_manager') and self.confirmation_manager:
+        if hasattr(self, "confirmation_manager") and self.confirmation_manager:
             # Cleanup handled by confirmation manager
             pass
-    
+
     async def _validate_configuration(self) -> None:
         """Validate server configuration and dependencies."""
         self.logger.info("Validating configuration")
-        
+
         # TODO: Add validation for:
         # - krr CLI availability
         # - Kubernetes connectivity
         # - Prometheus connectivity
         # - Required permissions
-        
+
         self.logger.info("Configuration validation completed")
 
 
@@ -1239,7 +1310,7 @@ def create_app() -> typer.Typer:
         help="MCP server for safe Kubernetes resource optimization using krr",
         add_completion=False,
     )
-    
+
     @app.command()
     def start(
         config_file: Optional[Path] = typer.Option(
@@ -1255,15 +1326,15 @@ def create_app() -> typer.Typer:
         ),
     ) -> None:
         """Start the krr MCP server."""
-        
+
         # Load configuration
         config = ServerConfig()
         if development:
             config.development_mode = True
-        
+
         # Create and start server
         server = KrrMCPServer(config)
-        
+
         try:
             asyncio.run(server.start())
         except KeyboardInterrupt:
@@ -1271,7 +1342,7 @@ def create_app() -> typer.Typer:
         except Exception as e:
             logger.error("Server failed", error=str(e), exc_info=True)
             sys.exit(1)
-    
+
     @app.command()
     def validate(
         config_file: Optional[Path] = typer.Option(
@@ -1282,10 +1353,10 @@ def create_app() -> typer.Typer:
         ),
     ) -> None:
         """Validate configuration and dependencies."""
-        
+
         config = ServerConfig()
         server = KrrMCPServer(config)
-        
+
         async def run_validation():
             try:
                 await server._validate_configuration()
@@ -1293,9 +1364,9 @@ def create_app() -> typer.Typer:
             except Exception as e:
                 typer.echo(f"❌ Configuration validation failed: {e}")
                 sys.exit(1)
-        
+
         asyncio.run(run_validation())
-    
+
     return app
 
 

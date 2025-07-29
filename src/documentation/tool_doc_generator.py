@@ -17,10 +17,10 @@ logger = structlog.get_logger(__name__)
 
 class ToolDocumentationGenerator:
     """Generate comprehensive documentation for MCP tools."""
-    
+
     def __init__(self, server_instance, output_dir: Optional[Path] = None):
         """Initialize the documentation generator.
-        
+
         Args:
             server_instance: KrrMCPServer instance to document
             output_dir: Directory to write documentation files
@@ -28,20 +28,20 @@ class ToolDocumentationGenerator:
         self.server = server_instance
         self.output_dir = output_dir or Path("docs/api")
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.logger = structlog.get_logger(self.__class__.__name__)
-    
+
     def generate_full_documentation(self) -> Dict[str, Any]:
         """Generate complete documentation for all MCP tools.
-        
+
         Returns:
             Dictionary containing all documentation data
         """
         self.logger.info("Generating full MCP tools documentation")
-        
+
         # Get all registered tools from the MCP server
         tools_info = self._extract_tools_info()
-        
+
         # Generate documentation structure
         documentation = {
             "metadata": {
@@ -59,28 +59,28 @@ class ToolDocumentationGenerator:
             "examples": self._generate_usage_examples(),
             "error_codes": self._generate_error_codes_documentation(),
         }
-        
+
         # Write documentation files
         self._write_markdown_documentation(documentation)
         self._write_json_documentation(documentation)
         self._write_openapi_specification(documentation)
-        
+
         self.logger.info(
             "Documentation generation completed",
             tools_count=len(tools_info),
             output_dir=str(self.output_dir),
         )
-        
+
         return documentation
-    
+
     def _extract_tools_info(self) -> Dict[str, Any]:
         """Extract information about all registered MCP tools."""
         tools_info = {}
-        
+
         # Get tools from the FastMCP server instance
         # Note: This is a simplified approach - in a real implementation,
         # you'd need to access the actual registered tools from FastMCP
-        
+
         tool_definitions = {
             "scan_recommendations": {
                 "description": "Scan Kubernetes cluster for resource optimization recommendations",
@@ -97,7 +97,7 @@ class ToolDocumentationGenerator:
                         "enum": ["simple", "medium", "aggressive"],
                     },
                     "resource_filter": {
-                        "type": "string", 
+                        "type": "string",
                         "description": "Filter resources by name pattern (optional)",
                         "required": False,
                     },
@@ -107,9 +107,18 @@ class ToolDocumentationGenerator:
                     "description": "Dictionary with recommendations and metadata",
                     "properties": {
                         "status": {"type": "string", "enum": ["success", "error"]},
-                        "recommendations": {"type": "array", "description": "List of optimization recommendations"},
-                        "metadata": {"type": "object", "description": "Scan metadata and statistics"},
-                        "summary": {"type": "object", "description": "Summary of potential savings"},
+                        "recommendations": {
+                            "type": "array",
+                            "description": "List of optimization recommendations",
+                        },
+                        "metadata": {
+                            "type": "object",
+                            "description": "Scan metadata and statistics",
+                        },
+                        "summary": {
+                            "type": "object",
+                            "description": "Summary of potential savings",
+                        },
                     },
                 },
                 "safety_level": "read_only",
@@ -121,9 +130,17 @@ class ToolDocumentationGenerator:
                             "status": "success",
                             "recommendations": [
                                 {
-                                    "object": {"kind": "Deployment", "name": "web-app", "namespace": "default"},
-                                    "current": {"requests": {"cpu": "100m", "memory": "128Mi"}},
-                                    "recommended": {"requests": {"cpu": "250m", "memory": "256Mi"}},
+                                    "object": {
+                                        "kind": "Deployment",
+                                        "name": "web-app",
+                                        "namespace": "default",
+                                    },
+                                    "current": {
+                                        "requests": {"cpu": "100m", "memory": "128Mi"}
+                                    },
+                                    "recommended": {
+                                        "requests": {"cpu": "250m", "memory": "256Mi"}
+                                    },
                                 }
                             ],
                         },
@@ -144,8 +161,14 @@ class ToolDocumentationGenerator:
                     "description": "Dictionary with change preview and impact analysis",
                     "properties": {
                         "status": {"type": "string", "enum": ["success", "error"]},
-                        "preview": {"type": "object", "description": "Detailed change preview"},
-                        "next_steps": {"type": "array", "description": "Recommended next steps"},
+                        "preview": {
+                            "type": "object",
+                            "description": "Detailed change preview",
+                        },
+                        "next_steps": {
+                            "type": "array",
+                            "description": "Recommended next steps",
+                        },
                     },
                 },
                 "safety_level": "analysis_only",
@@ -172,9 +195,18 @@ class ToolDocumentationGenerator:
                     "properties": {
                         "status": {"type": "string", "enum": ["success", "error"]},
                         "confirmation_required": {"type": "boolean"},
-                        "confirmation_token": {"type": "string", "description": "Token for applying changes"},
-                        "confirmation_prompt": {"type": "string", "description": "Human-readable confirmation prompt"},
-                        "safety_assessment": {"type": "object", "description": "Risk assessment details"},
+                        "confirmation_token": {
+                            "type": "string",
+                            "description": "Token for applying changes",
+                        },
+                        "confirmation_prompt": {
+                            "type": "string",
+                            "description": "Human-readable confirmation prompt",
+                        },
+                        "safety_assessment": {
+                            "type": "object",
+                            "description": "Risk assessment details",
+                        },
                     },
                 },
                 "safety_level": "confirmation_required",
@@ -251,7 +283,10 @@ class ToolDocumentationGenerator:
                     "description": "Dictionary with comprehensive safety report",
                     "properties": {
                         "status": {"type": "string", "enum": ["success", "error"]},
-                        "safety_report": {"type": "object", "description": "Detailed safety assessment"},
+                        "safety_report": {
+                            "type": "object",
+                            "description": "Detailed safety assessment",
+                        },
                     },
                 },
                 "safety_level": "analysis_only",
@@ -281,7 +316,10 @@ class ToolDocumentationGenerator:
                     "description": "Dictionary with execution history",
                     "properties": {
                         "status": {"type": "string", "enum": ["success", "error"]},
-                        "history": {"type": "array", "description": "List of historical executions"},
+                        "history": {
+                            "type": "array",
+                            "description": "List of historical executions",
+                        },
                         "total_count": {"type": "integer"},
                         "filters_applied": {"type": "object"},
                     },
@@ -289,9 +327,9 @@ class ToolDocumentationGenerator:
                 "safety_level": "read_only",
             },
         }
-        
+
         return tool_definitions
-    
+
     def _generate_safety_documentation(self) -> Dict[str, Any]:
         """Generate documentation for safety features."""
         return {
@@ -343,7 +381,7 @@ class ToolDocumentationGenerator:
                 ],
             },
         }
-    
+
     def _generate_usage_examples(self) -> Dict[str, Any]:
         """Generate comprehensive usage examples."""
         return {
@@ -364,7 +402,9 @@ class ToolDocumentationGenerator:
                         "action": "Preview changes",
                         "tool": "preview_changes",
                         "example": {
-                            "input": {"recommendations": "[recommendations from step 1]"},
+                            "input": {
+                                "recommendations": "[recommendations from step 1]"
+                            },
                             "description": "Preview what changes would be made",
                         },
                     },
@@ -373,7 +413,10 @@ class ToolDocumentationGenerator:
                         "action": "Request confirmation",
                         "tool": "request_confirmation",
                         "example": {
-                            "input": {"changes": "[changes from step 2]", "risk_level": "medium"},
+                            "input": {
+                                "changes": "[changes from step 2]",
+                                "risk_level": "medium",
+                            },
                             "description": "Get user confirmation for changes",
                         },
                     },
@@ -382,7 +425,10 @@ class ToolDocumentationGenerator:
                         "action": "Apply changes",
                         "tool": "apply_recommendations",
                         "example": {
-                            "input": {"confirmation_token": "[token from step 3]", "dry_run": False},
+                            "input": {
+                                "confirmation_token": "[token from step 3]",
+                                "dry_run": False,
+                            },
                             "description": "Apply the approved changes",
                         },
                     },
@@ -396,7 +442,10 @@ class ToolDocumentationGenerator:
                         "description": "When requesting confirmation for high-impact changes",
                         "example": {
                             "tool": "request_confirmation",
-                            "input": {"changes": "[large resource increases]", "risk_level": "high"},
+                            "input": {
+                                "changes": "[large resource increases]",
+                                "risk_level": "high",
+                            },
                             "safety_response": "Enhanced warnings and gradual rollout recommendations",
                         },
                     },
@@ -405,7 +454,9 @@ class ToolDocumentationGenerator:
                         "description": "Special handling for production namespaces",
                         "example": {
                             "tool": "preview_changes",
-                            "input": {"recommendations": "[production namespace changes]"},
+                            "input": {
+                                "recommendations": "[production namespace changes]"
+                            },
                             "safety_response": "Production namespace warnings and extra validation",
                         },
                     },
@@ -414,14 +465,17 @@ class ToolDocumentationGenerator:
                         "description": "Rolling back changes if something goes wrong",
                         "example": {
                             "tool": "rollback_changes",
-                            "input": {"rollback_id": "[snapshot_id]", "confirmation_token": "[new_token]"},
+                            "input": {
+                                "rollback_id": "[snapshot_id]",
+                                "confirmation_token": "[new_token]",
+                            },
                             "safety_response": "Restore original resource configurations",
                         },
                     },
                 ],
             },
         }
-    
+
     def _generate_error_codes_documentation(self) -> Dict[str, Any]:
         """Generate documentation for error codes."""
         return {
@@ -430,7 +484,11 @@ class ToolDocumentationGenerator:
                 "COMPONENT_NOT_READY": {
                     "description": "Required server components not initialized",
                     "resolution": "Wait for server initialization to complete",
-                    "tools": ["scan_recommendations", "preview_changes", "request_confirmation"],
+                    "tools": [
+                        "scan_recommendations",
+                        "preview_changes",
+                        "request_confirmation",
+                    ],
                 },
                 "INVALID_STRATEGY": {
                     "description": "Invalid krr strategy provided",
@@ -471,26 +529,26 @@ class ToolDocumentationGenerator:
                 "Log errors for troubleshooting and monitoring",
             ],
         }
-    
+
     def _write_markdown_documentation(self, documentation: Dict[str, Any]) -> None:
         """Write documentation as Markdown files."""
         # Main API reference
         with open(self.output_dir / "api-reference.md", "w") as f:
             f.write(self._generate_markdown_content(documentation))
-        
+
         # Safety guide
         with open(self.output_dir / "safety-guide.md", "w") as f:
             f.write(self._generate_safety_markdown(documentation["safety_features"]))
-        
+
         # Usage examples
         with open(self.output_dir / "usage-examples.md", "w") as f:
             f.write(self._generate_examples_markdown(documentation["examples"]))
-    
+
     def _write_json_documentation(self, documentation: Dict[str, Any]) -> None:
         """Write documentation as JSON for programmatic access."""
         with open(self.output_dir / "api-documentation.json", "w") as f:
             json.dump(documentation, f, indent=2, default=str)
-    
+
     def _write_openapi_specification(self, documentation: Dict[str, Any]) -> None:
         """Write OpenAPI 3.0 specification."""
         openapi_spec = {
@@ -510,32 +568,36 @@ class ToolDocumentationGenerator:
                         "name": "X-Confirmation-Token",
                         "description": "Required for cluster modification operations",
                     }
-                }
+                },
             },
         }
-        
+
         # Convert tools to OpenAPI paths
         for tool_name, tool_info in documentation["tools"].items():
             openapi_spec["paths"][f"/tools/{tool_name}"] = {
                 "post": {
                     "summary": tool_info["description"],
-                    "parameters": self._convert_parameters_to_openapi(tool_info.get("parameters", {})),
+                    "parameters": self._convert_parameters_to_openapi(
+                        tool_info.get("parameters", {})
+                    ),
                     "responses": {
                         "200": {
                             "description": "Successful response",
                             "content": {
                                 "application/json": {
-                                    "schema": tool_info.get("returns", {"type": "object"})
+                                    "schema": tool_info.get(
+                                        "returns", {"type": "object"}
+                                    )
                                 }
-                            }
+                            },
                         }
-                    }
+                    },
                 }
             }
-        
+
         with open(self.output_dir / "openapi.json", "w") as f:
             json.dump(openapi_spec, f, indent=2)
-    
+
     def _generate_markdown_content(self, documentation: Dict[str, Any]) -> str:
         """Generate main Markdown documentation content."""
         content = f"""# KRR MCP Server API Reference
@@ -551,28 +613,32 @@ Generated on: {documentation['metadata']['generated_at']}
 ## Available Tools
 
 """
-        
+
         for tool_name, tool_info in documentation["tools"].items():
             content += f"### {tool_name}\n\n"
             content += f"{tool_info['description']}\n\n"
-            
+
             if tool_info.get("critical_notice"):
                 content += f"**{tool_info['critical_notice']}**\n\n"
-            
-            content += f"**Safety Level:** {tool_info.get('safety_level', 'unknown')}\n\n"
-            
+
+            content += (
+                f"**Safety Level:** {tool_info.get('safety_level', 'unknown')}\n\n"
+            )
+
             # Parameters
             if tool_info.get("parameters"):
                 content += "**Parameters:**\n\n"
                 for param_name, param_info in tool_info["parameters"].items():
-                    required = " (required)" if param_info.get("required") else " (optional)"
+                    required = (
+                        " (required)" if param_info.get("required") else " (optional)"
+                    )
                     content += f"- `{param_name}` ({param_info['type']}){required}: {param_info['description']}\n"
                 content += "\n"
-            
+
             # Returns
             if tool_info.get("returns"):
                 content += f"**Returns:** {tool_info['returns']['description']}\n\n"
-            
+
             # Examples
             if tool_info.get("examples"):
                 content += "**Examples:**\n\n"
@@ -581,11 +647,11 @@ Generated on: {documentation['metadata']['generated_at']}
                     content += "```json\n"
                     content += json.dumps(example.get("input", {}), indent=2)
                     content += "\n```\n\n"
-            
+
             content += "---\n\n"
-        
+
         return content
-    
+
     def _generate_safety_markdown(self, safety_features: Dict[str, Any]) -> str:
         """Generate safety guide Markdown content."""
         content = f"""# KRR MCP Server Safety Guide
@@ -595,31 +661,31 @@ Generated on: {documentation['metadata']['generated_at']}
 ## Safety Levels
 
 """
-        
+
         for level, info in safety_features["safety_levels"].items():
             content += f"### {level.replace('_', ' ').title()}\n\n"
             content += f"{info['description']}\n\n"
             content += f"**Tools:** {', '.join(info['tools'])}\n\n"
             content += f"**Risk Level:** {info['risk']}\n\n"
-        
+
         content += "## Safety Guarantees\n\n"
         for guarantee in safety_features["safety_guarantees"]:
             content += f"- {guarantee}\n"
-        
+
         content += f"\n## Confirmation Workflow\n\n{safety_features['confirmation_workflow']['description']}\n\n"
         for step in safety_features["confirmation_workflow"]["steps"]:
             content += f"{step}\n"
-        
+
         return content
-    
+
     def _generate_examples_markdown(self, examples: Dict[str, Any]) -> str:
         """Generate usage examples Markdown content."""
         content = "# KRR MCP Server Usage Examples\n\n"
-        
+
         # Basic workflow
         workflow = examples["basic_workflow"]
         content += f"## {workflow['description']}\n\n"
-        
+
         for step_info in workflow["steps"]:
             content += f"### Step {step_info['step']}: {step_info['action']}\n\n"
             content += f"**Tool:** `{step_info['tool']}`\n\n"
@@ -627,23 +693,27 @@ Generated on: {documentation['metadata']['generated_at']}
             content += "```json\n"
             content += json.dumps(step_info["example"]["input"], indent=2)
             content += "\n```\n\n"
-        
+
         # Safety scenarios
         scenarios = examples["safety_scenarios"]
         content += f"## {scenarios['description']}\n\n"
-        
+
         for scenario in scenarios["scenarios"]:
             content += f"### {scenario['scenario']}\n\n"
             content += f"{scenario['description']}\n\n"
             content += f"**Tool:** `{scenario['example']['tool']}`\n\n"
-            content += f"**Safety Response:** {scenario['example']['safety_response']}\n\n"
-        
+            content += (
+                f"**Safety Response:** {scenario['example']['safety_response']}\n\n"
+            )
+
         return content
-    
-    def _convert_parameters_to_openapi(self, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
+
+    def _convert_parameters_to_openapi(
+        self, parameters: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Convert parameter definitions to OpenAPI format."""
         openapi_params = []
-        
+
         for param_name, param_info in parameters.items():
             openapi_param = {
                 "name": param_name,
@@ -652,13 +722,13 @@ Generated on: {documentation['metadata']['generated_at']}
                 "required": param_info.get("required", False),
                 "schema": {"type": param_info["type"]},
             }
-            
+
             if param_info.get("enum"):
                 openapi_param["schema"]["enum"] = param_info["enum"]
-            
+
             if param_info.get("default") is not None:
                 openapi_param["schema"]["default"] = param_info["default"]
-            
+
             openapi_params.append(openapi_param)
-        
+
         return openapi_params
