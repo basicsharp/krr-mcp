@@ -132,6 +132,32 @@ class TestRunner:
         """Run safety-critical tests with maximum coverage requirements."""
         print("🛡️  Running safety-critical tests...")
 
+        # Clear any existing coverage data to ensure clean results
+        clear_cmd = ["python", "-m", "coverage", "erase"]
+        subprocess.run(clear_cmd, cwd=self.project_root, capture_output=True)
+
+        # Create temporary coverage config for safety tests
+        safety_coveragerc = self.project_root / ".coveragerc-safety"
+        safety_config = """[run]
+source = src/safety
+omit =
+    */tests/*
+    */test_*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    @(abc\\.)?abstractmethod
+
+show_missing = True
+"""
+        safety_coveragerc.write_text(safety_config)
+
         safety_test_files = [
             "test_safety_models.py",
             "test_safety_validator.py",
@@ -144,16 +170,29 @@ class TestRunner:
             "pytest",
             *[str(self.test_dir / f) for f in safety_test_files],
             "-v" if verbose else "-q",
-            "--override-ini",
-            "addopts=",  # Clear default addopts from config
             "--cov=src/safety",  # Enable coverage for safety module only
             "--cov-report=html:htmlcov-safety",
             "--cov-report=term-missing",
-            "--cov-report=xml",
-            "--cov-fail-under=95",  # Safety-critical requires 95%+
+            "--cov-report=xml:test-reports/safety-coverage.xml",
+            f"--cov-config={safety_coveragerc}",  # Use safety-specific config
+            "--override-ini",  # Override config settings
+            "addopts=--tb=short",  # Minimal addopts without coverage failure
+            "--tb=short",  # Shorter tracebacks
         ]
 
-        return self._run_command(cmd, "Safety-critical tests")
+        try:
+            # Run the tests first
+            success = self._run_command(cmd, "Safety-critical tests execution")
+
+            if not success:
+                return False
+
+            # Check safety module coverage separately
+            return self._validate_safety_coverage()
+        finally:
+            # Clean up temporary config file
+            if safety_coveragerc.exists():
+                safety_coveragerc.unlink()
 
     def run_all_tests(self, verbose: bool = False) -> Dict[str, bool]:
         """Run all test suites and return results."""
@@ -307,6 +346,58 @@ class TestRunner:
             return True
         else:
             print(f"❌ {description} failed after {duration:.2f}s")
+            return False
+
+    def _validate_safety_coverage(self) -> bool:
+        """Validate safety module coverage meets 95% requirement."""
+        print("🔍 Validating safety module coverage...")
+
+        # Get coverage report for safety modules only
+        cmd = ["python", "-m", "coverage", "report", "--include=src/safety/*"]
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, cwd=self.project_root
+        )
+
+        if result.returncode != 0:
+            print("❌ Failed to get safety coverage report!")
+            print(result.stderr)
+            return False
+
+        coverage_output = result.stdout
+        print(coverage_output)
+
+        # Parse coverage for each safety module
+        lines = coverage_output.strip().split("\n")
+        safety_coverages = []
+
+        for line in lines:
+            if "src/safety/" in line and "TOTAL" not in line:
+                parts = line.split()
+                if len(parts) >= 4:
+                    try:
+                        coverage_percent = parts[3].rstrip("%")
+                        coverage = float(coverage_percent)
+                        safety_coverages.append(coverage)
+                        module_name = parts[0]
+                        print(f"📊 {module_name}: {coverage}%")
+                    except (ValueError, IndexError):
+                        continue
+
+        if not safety_coverages:
+            print("❌ No safety module coverage data found!")
+            return False
+
+        # Check if all safety modules meet 95% coverage
+        min_coverage = min(safety_coverages)
+        avg_coverage = sum(safety_coverages) / len(safety_coverages)
+
+        print(f"📊 Safety modules - Min: {min_coverage}%, Avg: {avg_coverage:.1f}%")
+
+        if min_coverage >= 95.0:
+            print("✅ Safety-critical coverage requirements met!")
+            return True
+        else:
+            print(f"❌ Safety coverage {min_coverage}% below required 95%!")
             return False
 
     def _check_safety_coverage(self) -> bool:
