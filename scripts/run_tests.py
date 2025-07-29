@@ -141,9 +141,12 @@ class TestRunner:
             "pytest",
             *[str(self.test_dir / f) for f in safety_test_files],
             "-v" if verbose else "-q",
-            "--cov=src/safety",
+            "--override-ini",
+            "addopts=",  # Clear default addopts from config
+            "--cov=src/safety",  # Enable coverage for safety module only
             "--cov-report=html:htmlcov-safety",
             "--cov-report=term-missing",
+            "--cov-report=xml",
             "--cov-fail-under=95",  # Safety-critical requires 95%+
         ]
 

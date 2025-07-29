@@ -238,7 +238,6 @@ class ConfirmationManager:
             original_manifests=original_manifests,
             rollback_commands=rollback_commands,
             cluster_context=cluster_context,
-            affected_resources=[],  # Will be populated from original_manifests by validator
             expires_at=expires_at,
         )
 

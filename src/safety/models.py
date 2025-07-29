@@ -309,7 +309,7 @@ class RollbackSnapshot(BaseModel):
         ..., description="Cluster context at time of snapshot"
     )
     affected_resources: List[Dict[str, str]] = Field(
-        ..., description="List of affected resources"
+        default_factory=list, description="List of affected resources"
     )
 
     @model_validator(mode="before")
