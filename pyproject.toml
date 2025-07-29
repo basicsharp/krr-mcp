@@ -69,6 +69,9 @@ addopts = [
     "--cov-config=.coveragerc",
     "--strict-markers",
     "--strict-config",
+    "-x",  # Stop at first failure in CI
+    "--disable-warnings",  # Reduce output noise
+    "--tb=line",  # Shorter tracebacks
 ]
 
 # Test markers for categorizing tests
@@ -85,7 +88,7 @@ markers = [
 ]
 
 # Timeout for tests (in seconds)
-timeout = 300
+timeout = 180
 
 # Minimum coverage thresholds
 filterwarnings = [
@@ -112,6 +115,7 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "pytest-timeout>=2.1.0",
+    "pytest-xdist>=3.6.3",
     "psutil>=5.9.0",
     "types-pyyaml>=6.0.12.20250516",
 ]

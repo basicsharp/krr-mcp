@@ -6,7 +6,7 @@ ensuring all components work together correctly and safely.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -147,15 +147,23 @@ class TestFullRecommendationWorkflow:
         # Test creating a mock rollback snapshot
         snapshot = RollbackSnapshot(
             snapshot_id="test-snapshot-1",
-            created_at=datetime.now(timezone.utc),
-            resources_snapshot=[{"test": "snapshot"}],
-            kubectl_commands=["kubectl get deployment test-app -o yaml"],
-            execution_context={"test": "context"},
+            operation_id="test-operation-123",
+            confirmation_token_id="test-token-123",
+            original_manifests=[
+                {
+                    "apiVersion": "apps/v1",
+                    "kind": "Deployment",
+                    "metadata": {"name": "test-app"},
+                }
+            ],
             rollback_commands=["kubectl apply -f original-state.yaml"],
+            cluster_context={"cluster": "test-cluster", "namespace": "default"},
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            created_at=datetime.now(timezone.utc),
         )
 
         assert snapshot.snapshot_id == "test-snapshot-1"
-        assert len(snapshot.resources_snapshot) > 0
+        assert len(snapshot.original_manifests) > 0
 
 
 class TestConcurrentWorkflows:

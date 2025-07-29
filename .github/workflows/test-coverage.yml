@@ -9,9 +9,15 @@ on:
 jobs:
   test-coverage:
     runs-on: ubuntu-latest
+    timeout-minutes: 45 # Global timeout for the entire job
     strategy:
       matrix:
         python-version: ["3.12"]
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}/src
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: 1
+      CI: true
 
     steps:
       - uses: actions/checkout@v4
@@ -49,27 +55,33 @@ jobs:
 
       - name: Run safety-critical tests
         run: |
-          uv run python scripts/run_tests.py --suite safety --verbose
+          uv run python scripts/run_tests.py --suite safety
+        timeout-minutes: 5
 
       - name: Run unit tests with coverage
         run: |
-          uv run python scripts/run_tests.py --suite unit --verbose
+          uv run python scripts/run_tests.py --suite unit
+        timeout-minutes: 10
 
       - name: Run integration tests
         run: |
-          uv run python scripts/run_tests.py --suite integration --verbose
+          uv run python scripts/run_tests.py --suite integration
+        timeout-minutes: 8
 
       - name: Run performance tests
         run: |
-          uv run python scripts/run_tests.py --suite performance --verbose
+          uv run python scripts/run_tests.py --suite performance
+        timeout-minutes: 6
 
       - name: Run chaos tests
         run: |
-          uv run python scripts/run_tests.py --suite chaos --verbose
+          uv run python scripts/run_tests.py --suite chaos
+        timeout-minutes: 6
 
       - name: Generate coverage report
         run: |
           uv run python scripts/run_tests.py --coverage-only
+        timeout-minutes: 2
 
       - name: Validate quality gates
         run: |

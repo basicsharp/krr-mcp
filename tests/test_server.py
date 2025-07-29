@@ -52,7 +52,7 @@ class TestKrrMCPServer:
         server = KrrMCPServer(test_config)
 
         # Wait for async initialization to complete
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.05)
 
         assert server.config == test_config
         assert server._running is False

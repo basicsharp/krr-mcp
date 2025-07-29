@@ -101,7 +101,17 @@ class KubectlExecutor:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await process.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=30  # 30 second timeout
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                raise KubectlContextError(
+                    "kubectl cluster-info command timed out after 30 seconds",
+                    context=self.kubernetes_context,
+                )
 
             if process.returncode != 0:
                 stderr_str = stderr.decode() if stderr else ""

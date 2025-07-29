@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +20,12 @@ from src.recommender.models import (
     KubernetesObject,
     ResourceValue,
 )
-from src.safety.models import ConfirmationToken, ResourceChange, RiskLevel
+from src.safety.models import (
+    ConfirmationToken,
+    ResourceChange,
+    RiskLevel,
+    SafetyAssessment,
+)
 from src.server import KrrMCPServer, ServerConfig
 
 
@@ -156,16 +161,17 @@ class TestPreviewChangesTool:
         ]
 
         # Mock safety validator
-        with patch.object(server.safety_validator, "analyze_changes") as mock_analyze:
+        with patch.object(
+            server.confirmation_manager.safety_validator, "validate_changes"
+        ) as mock_analyze:
             from src.safety.models import SafetyAssessment
 
             mock_assessment = SafetyAssessment(
                 overall_risk_level=RiskLevel.LOW,
-                total_changes=1,
-                high_risk_changes=0,
-                estimated_impact_score=0.3,
-                recommendations=["Changes appear safe"],
-                change_assessments=[],
+                total_resources_affected=1,
+                high_impact_changes=0,
+                critical_workloads_affected=0,
+                warnings=[],
             )
             mock_analyze.return_value = mock_assessment
 
@@ -175,16 +181,19 @@ class TestPreviewChangesTool:
             ) as mock_transaction:
                 mock_transaction.return_value = ExecutionTransaction(
                     transaction_id="test-transaction",
+                    confirmation_token_id="test-token-123",
                     commands=[],
                     execution_mode=ExecutionMode.SINGLE,
                     dry_run=True,
                 )
 
-                # Test preview functionality would be called through the actual tool
-                assessment = await server.safety_validator.analyze_changes(changes)
+            # Test preview functionality would be called through the actual tool
+            assessment = server.confirmation_manager.safety_validator.validate_changes(
+                changes
+            )
 
-                assert assessment.overall_risk_level == RiskLevel.LOW
-                assert assessment.total_changes == 1
+            assert assessment.overall_risk_level == RiskLevel.LOW
+            assert assessment.total_resources_affected == 1
 
     @pytest.mark.asyncio
     async def test_preview_changes_high_risk(self, server_with_recommendations):
@@ -206,7 +215,9 @@ class TestPreviewChangesTool:
         ]
 
         # Mock safety validator for high risk
-        with patch.object(server.safety_validator, "analyze_changes") as mock_analyze:
+        with patch.object(
+            server.confirmation_manager.safety_validator, "validate_changes"
+        ) as mock_analyze:
             from src.safety.models import SafetyAssessment
 
             mock_assessment = SafetyAssessment(
@@ -219,7 +230,11 @@ class TestPreviewChangesTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = await server.safety_validator.analyze_changes(changes)
+            assessment = (
+                await server.confirmation_manager.safety_validator.validate_changes(
+                    changes
+                )
+            )
 
             assert assessment.overall_risk_level == RiskLevel.HIGH
             assert assessment.high_risk_changes == 1
@@ -258,23 +273,29 @@ class TestRequestConfirmationTool:
 
         # Mock confirmation manager
         with patch.object(
-            server.confirmation_manager, "create_confirmation_token"
+            server.confirmation_manager, "request_confirmation"
         ) as mock_create:
+            mock_assessment = SafetyAssessment(
+                overall_risk_level=RiskLevel.LOW,
+                total_resources_affected=1,
+                warnings=[],
+            )
             mock_token = ConfirmationToken(
-                token="test-token-123",
+                token_id="test-token-123",
+                secret="test-secret-456",
                 created_at=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
                 changes=changes,
-                risk_level=RiskLevel.LOW,
+                safety_assessment=mock_assessment,
                 user_context={},
             )
             mock_create.return_value = mock_token
 
-            token = server.confirmation_manager.create_confirmation_token(
-                changes=changes, risk_level=RiskLevel.LOW
+            token = await server.confirmation_manager.request_confirmation(
+                changes=changes
             )
 
-            assert token.token == "test-token-123"
+            assert token.token_id == "test-token-123"
             assert len(token.changes) == 1
 
     @pytest.mark.asyncio
@@ -342,12 +363,17 @@ class TestApplyRecommendationsTool:
         ) as mock_execute:
             mock_report = ExecutionReport(
                 transaction_id="test-transaction",
-                execution_mode=ExecutionMode.SINGLE,
-                execution_status=ExecutionStatus.SUCCESS,
-                started_at=datetime.now(timezone.utc),
-                completed_at=datetime.now(timezone.utc),
-                command_results=[],
-                dry_run=False,
+                total_commands=1,
+                successful_commands=1,
+                failed_commands=0,
+                total_duration_seconds=2.5,
+                resources_modified=[
+                    {"kind": "Deployment", "name": "test-app", "namespace": "default"}
+                ],
+                namespaces_affected=["default"],
+                command_summaries=[
+                    {"command": "apply", "status": "completed", "duration": 2.5}
+                ],
             )
             mock_execute.return_value = mock_report
 
@@ -357,6 +383,7 @@ class TestApplyRecommendationsTool:
             ) as mock_create:
                 mock_transaction = ExecutionTransaction(
                     transaction_id="test-transaction",
+                    confirmation_token_id="test-token-123",
                     commands=[],
                     execution_mode=ExecutionMode.SINGLE,
                     dry_run=False,
@@ -369,7 +396,7 @@ class TestApplyRecommendationsTool:
 
                 report = await server.kubectl_executor.execute_transaction(transaction)
 
-                assert report.execution_status == ExecutionStatus.SUCCESS
+                assert report.successful_commands == 1
                 assert report.transaction_id == "test-transaction"
 
     @pytest.mark.asyncio
@@ -439,7 +466,7 @@ class TestRollbackChangesTool:
             mock_report = ExecutionReport(
                 transaction_id="rollback-transaction",
                 execution_mode=ExecutionMode.SINGLE,
-                execution_status=ExecutionStatus.SUCCESS,
+                execution_status=ExecutionStatus.COMPLETED,
                 started_at=datetime.now(timezone.utc),
                 completed_at=datetime.now(timezone.utc),
                 command_results=[],
@@ -507,7 +534,9 @@ class TestAnalyzeSafetyTool:
         ]
 
         # Mock safety analysis
-        with patch.object(server.safety_validator, "analyze_changes") as mock_analyze:
+        with patch.object(
+            server.confirmation_manager.safety_validator, "validate_changes"
+        ) as mock_analyze:
             from src.safety.models import ChangeAssessment, SafetyAssessment
 
             mock_assessment = SafetyAssessment(
@@ -528,7 +557,11 @@ class TestAnalyzeSafetyTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = await server.safety_validator.analyze_changes(changes)
+            assessment = (
+                await server.confirmation_manager.safety_validator.validate_changes(
+                    changes
+                )
+            )
 
             assert assessment.overall_risk_level == RiskLevel.LOW
             assert assessment.total_changes == 1
@@ -553,7 +586,9 @@ class TestAnalyzeSafetyTool:
         ]
 
         # Mock safety analysis for production
-        with patch.object(server.safety_validator, "analyze_changes") as mock_analyze:
+        with patch.object(
+            server.confirmation_manager.safety_validator, "validate_changes"
+        ) as mock_analyze:
             from src.safety.models import ChangeAssessment, SafetyAssessment
 
             mock_assessment = SafetyAssessment(
@@ -574,7 +609,11 @@ class TestAnalyzeSafetyTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = await server.safety_validator.analyze_changes(changes)
+            assessment = (
+                await server.confirmation_manager.safety_validator.validate_changes(
+                    changes
+                )
+            )
 
             assert assessment.overall_risk_level == RiskLevel.MEDIUM
             assert assessment.estimated_impact_score == 0.6
@@ -677,7 +716,7 @@ class TestGetVersionInfoTool:
         assert version_registry is not None
 
         # Test that registry has tools
-        tools = version_registry.get_all_tools()
+        tools = version_registry.get_all_tools_info()
         assert isinstance(tools, dict)
 
 
@@ -701,7 +740,7 @@ class TestServerComponentIntegration:
 
         # Test all major components exist
         assert server.krr_client is not None
-        assert server.safety_validator is not None
+        assert server.confirmation_manager.safety_validator is not None
         assert server.confirmation_manager is not None
         assert server.kubectl_executor is not None
         assert server.logger is not None

@@ -188,7 +188,7 @@ class TestMCPTools:
         server = KrrMCPServer(mock_server_config)
 
         # Wait for async initialization to complete
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.05)
 
         assert server.config.mock_krr_responses is True
         assert server.config.mock_kubectl_commands is True

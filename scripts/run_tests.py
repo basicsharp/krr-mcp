@@ -36,13 +36,16 @@ class TestRunner:
             str(self.test_dir),
             "-v" if verbose else "-q",
             "--cov=src",
-            "--cov-report=html",
             "--cov-report=term-missing",
             "--cov-report=xml",
             # Exclude integration, performance, and chaos tests
             "-m",
             "not integration and not performance and not chaos",
             f"--cov-fail-under=85",  # Minimum 85% coverage
+            "-n",
+            "auto",  # Parallel execution
+            "--maxfail=10",  # Stop after 10 failures
+            "--tb=short",  # Shorter tracebacks
         ]
 
         return self._run_command(cmd, "Unit tests")
@@ -185,24 +188,30 @@ class TestRunner:
         """Generate comprehensive coverage report."""
         print("📊 Generating coverage report...")
 
-        # Generate HTML report
-        cmd = [
-            "python",
-            "-m",
-            "coverage",
-            "html",
-            "--directory",
-            str(self.coverage_dir),
-            "--title",
-            "KRR MCP Server Coverage Report",
-        ]
+        # Generate HTML report (only if not in CI)
+        import os
 
-        success = self._run_command(cmd, "Coverage HTML report")
+        if not os.getenv("CI"):
+            cmd = [
+                "python",
+                "-m",
+                "coverage",
+                "html",
+                "--directory",
+                str(self.coverage_dir),
+                "--title",
+                "KRR MCP Server Coverage Report",
+            ]
 
-        if success:
-            print(
-                f"📈 Coverage report generated at: {self.coverage_dir / 'index.html'}"
-            )
+            success = self._run_command(cmd, "Coverage HTML report")
+
+            if success:
+                print(
+                    f"📈 Coverage report generated at: {self.coverage_dir / 'index.html'}"
+                )
+        else:
+            print("📊 Skipping HTML coverage report in CI environment")
+            success = True
 
         # Generate XML report for CI/CD
         xml_cmd = [

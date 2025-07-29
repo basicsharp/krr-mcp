@@ -105,7 +105,18 @@ class KrrClient:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await process.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=30  # 30 second timeout
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                raise KrrVersionError(
+                    "krr --version command timed out after 30 seconds",
+                    current_version=None,
+                    required_version=self.MIN_KRR_VERSION,
+                )
 
             if process.returncode != 0:
                 raise KrrVersionError(
