@@ -62,3 +62,12 @@ dmypy.json
 
 # Claude worktree management
 .claude-wt/worktrees
+
+# Project specific
+.env.local
+.env.development
+.env.production
+kubeconfig*
+audit.log
+rollback_snapshots/
+temp_configs/
