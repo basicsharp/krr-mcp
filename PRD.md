@@ -402,8 +402,8 @@ krr analyze \
 # Analyze by labels
 krr analyze \
   --selector "app=frontend,env=prod" \
-  --format json \
-  --output recommendations.json
+  --formatter json \
+  --fileoutput recommendations.json
 
 # Exclude specific workloads
 krr analyze \
@@ -429,10 +429,9 @@ krr apply \
 
 ```bash
 # Generate HTML report
-krr report \
-  --format html \
-  --output cost-analysis.html \
-  --include-graphs
+krr simple \
+  --formatter html \
+  --fileoutput cost-analysis.html
 
 # Export to Robusta SaaS
 krr export \

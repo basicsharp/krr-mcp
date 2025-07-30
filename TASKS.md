@@ -385,6 +385,32 @@
 - [ ] Create quarterly review process
 - [ ] Plan for long-term sustainability
 
+## Ad-hoc: krr CLI Arguments Correction ✅ COMPLETED
+**Goal**: Fix incorrect krr CLI command arguments to match actual krr tool interface
+
+### Issues Identified:
+- `--history` should be `--history-duration` (based on krr CLI help: `--history_duration`, `--history-duration`)
+- `--format` should be `--formatter` (based on krr CLI help: `--formatter`)
+- `--include-limits` is not a valid krr option (limits are included by default)
+
+### Tasks:
+- [x] Analyze krr CLI help file (`krr-cli-help.md`) to understand correct command arguments
+- [x] Review current krr command usage in codebase (`src/recommender/krr_client.py`)
+- [x] Correct krr command arguments in recommender module:
+  - [x] Change `--history` to `--history-duration` in `_build_krr_command()`
+  - [x] Change `--format` to `--formatter` in `_build_krr_command()`
+  - [x] Remove invalid `--include-limits` option from command builder
+  - [x] Update function signature to remove unused `include_limits` parameter
+- [x] Update related tests to match corrected arguments:
+  - [x] Fix test command expectations in `tests/test_krr_client.py`
+  - [x] Update documentation examples in `PRD.md`
+- [x] Validate changes with test execution
+
+### Files Modified:
+- `src/recommender/krr_client.py`: Fixed command argument building
+- `tests/test_krr_client.py`: Updated test expectations
+- `PRD.md`: Corrected example commands
+
 ---
 
 ## Priority Order

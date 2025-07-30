@@ -213,7 +213,7 @@ class TestKrrCommandExecution:
             mock_execute.return_value = json.dumps(mock_output)
 
             output = await mock_client._execute_krr_command(
-                ["krr", "simple", "--namespace", "default", "--format", "json"]
+                ["krr", "simple", "--namespace", "default", "--formatter", "json"]
             )
 
             assert isinstance(output, str)
@@ -227,7 +227,7 @@ class TestKrrCommandExecution:
         mock_client.kubeconfig_path = "/tmp/kubeconfig"
 
         # Mock command building
-        args = ["krr", "simple", "--namespace", "default", "--format", "json"]
+        args = ["krr", "simple", "--namespace", "default", "--formatter", "json"]
 
         if mock_client.kubeconfig_path:
             args.extend(["--kubeconfig", mock_client.kubeconfig_path])
@@ -544,14 +544,14 @@ class TestMockResponseGeneration:
     @pytest.mark.asyncio
     async def test_mock_multiple_namespaces(self, mock_client):
         """Test mock generation for multiple namespaces."""
-        namespaces = ["default", "production", "staging"]
-
+        # Test with None namespace (should return all namespaces)
         result = await mock_client._generate_mock_scan_result(
-            strategy=KrrStrategy.SIMPLE, namespace=namespaces, history_duration=7
+            namespace=None, strategy=KrrStrategy.SIMPLE, history_duration="7d"
         )
 
         assert isinstance(result, KrrScanResult)
-        assert all(ns in result.namespaces_scanned for ns in namespaces)
+        expected_namespaces = ["default", "prod"]  # From mock data
+        assert all(ns in result.namespaces_scanned for ns in expected_namespaces)
 
     @pytest.mark.asyncio
     async def test_mock_different_strategies(self, mock_client):

@@ -68,9 +68,11 @@ class KrrClient:
         # Cache for scan results
         self._cache: Dict[str, CachedScanResult] = {}
 
-        # Verify krr availability on initialization
-        if not mock_responses:
-            asyncio.create_task(self._verify_krr_availability())
+        # Track if krr availability has been verified
+        self._krr_verified = False
+
+        # Note: krr availability verification is handled on first use
+        # to avoid event loop issues during initialization
 
     async def _verify_krr_availability(self) -> None:
         """Verify that krr is available and compatible."""
@@ -178,7 +180,6 @@ class KrrClient:
         namespace: Optional[str] = None,
         strategy: KrrStrategy = KrrStrategy.SIMPLE,
         history_duration: str = "7d",
-        include_limits: bool = True,
         use_cache: bool = True,
     ) -> KrrScanResult:
         """Scan cluster for resource recommendations.
@@ -187,7 +188,6 @@ class KrrClient:
             namespace: Kubernetes namespace to analyze (None for all)
             strategy: krr strategy to use
             history_duration: Historical data period to analyze
-            include_limits: Whether to include resource limits
             use_cache: Whether to use cached results
 
         Returns:
@@ -196,6 +196,11 @@ class KrrClient:
         Raises:
             KrrError: If scan fails
         """
+        # Verify krr availability on first use
+        if not self.mock_responses and not self._krr_verified:
+            await self._verify_krr_availability()
+            self._krr_verified = True
+
         self.logger.info(
             "Starting krr scan",
             namespace=namespace,
@@ -223,7 +228,6 @@ class KrrClient:
                 namespace=namespace,
                 strategy=strategy,
                 history_duration=history_duration,
-                include_limits=include_limits,
             )
 
             # Execute krr command
@@ -264,7 +268,6 @@ class KrrClient:
         namespace: Optional[str] = None,
         strategy: KrrStrategy = KrrStrategy.SIMPLE,
         history_duration: str = "7d",
-        include_limits: bool = True,
     ) -> List[str]:
         """Build krr command arguments.
 
@@ -272,21 +275,18 @@ class KrrClient:
             namespace: Kubernetes namespace to analyze
             strategy: krr strategy to use
             history_duration: Historical data period
-            include_limits: Whether to include resource limits
 
         Returns:
             List of command arguments
         """
         cmd_args = [
             "krr",
-            "simple",  # krr subcommand
-            "--strategy",
             strategy.value,
-            "--history",
+            "--history-duration",
             history_duration,
             "--prometheus-url",
             self.prometheus_url,
-            "--format",
+            "--formatter",
             "json",  # Ensure JSON output
         ]
 
@@ -302,9 +302,8 @@ class KrrClient:
         if namespace:
             cmd_args.extend(["--namespace", namespace])
 
-        # Add limits inclusion
-        if include_limits:
-            cmd_args.append("--include-limits")
+        # Note: --include-limits is not a valid krr option
+        # Resource limits are included by default in krr output
 
         return cmd_args
 
