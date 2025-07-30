@@ -1,0 +1,61 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scan daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Run security scan with bandit
+        run: |
+          uv add bandit[toml]
+          uv run bandit -r src -f json -o security-report.json || true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.json
+
+      - name: Run safety check for dependencies
+        run: |
+          uv add safety
+          uv run safety check --json --output safety-report.json || true
+
+      - name: Upload safety report
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: safety-report.json
+
+      - name: Security scan summary
+        run: |
+          echo "Security scan completed. Check artifacts for detailed reports."
+          if [ -f security-report.json ]; then
+            echo "Bandit scan results available in security-report.json"
+          fi
+          if [ -f safety-report.json ]; then
+            echo "Safety scan results available in safety-report.json"
+          fi
