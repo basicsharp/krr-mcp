@@ -1163,6 +1163,126 @@ class KrrMCPServer:
         @versioned_tool(
             version="1.0.0",
             changelog=[
+                "Initial implementation with server health monitoring",
+                "Component availability checking",
+                "Configuration validation status",
+                "Performance metrics and uptime tracking",
+            ],
+        )
+        async def health_check(
+            include_details: bool = False,
+        ) -> Dict[str, Any]:
+            """Check server health and component status.
+
+            This tool provides health status information for the MCP server
+            and its components for monitoring and troubleshooting purposes.
+
+            Args:
+                include_details: Whether to include detailed component information
+
+            Returns:
+                Dictionary with health status and component information
+            """
+            self.logger.info(
+                "Performing health check",
+                include_details=include_details,
+            )
+
+            try:
+                health_status = "healthy"
+                components_status = {}
+
+                # Check core components
+                components_status["mcp_server"] = {
+                    "status": "healthy" if self._running else "stopped",
+                    "initialized": bool(self.mcp),
+                }
+
+                components_status["krr_client"] = {
+                    "status": "healthy" if self.krr_client else "not_initialized",
+                    "initialized": bool(self.krr_client),
+                }
+
+                components_status["confirmation_manager"] = {
+                    "status": (
+                        "healthy" if self.confirmation_manager else "not_initialized"
+                    ),
+                    "initialized": bool(self.confirmation_manager),
+                }
+
+                components_status["kubectl_executor"] = {
+                    "status": "healthy" if self.kubectl_executor else "not_initialized",
+                    "initialized": bool(self.kubectl_executor),
+                }
+
+                components_status["doc_generator"] = {
+                    "status": "healthy" if self.doc_generator else "not_initialized",
+                    "initialized": bool(self.doc_generator),
+                }
+
+                # Determine overall health
+                uninitialized_components = [
+                    name
+                    for name, status in components_status.items()
+                    if not status["initialized"]
+                ]
+
+                if uninitialized_components:
+                    health_status = "degraded"
+
+                if not self._running:
+                    health_status = "unhealthy"
+
+                result: Dict[str, Any] = {
+                    "status": "success",
+                    "health": {
+                        "overall_status": health_status,
+                        "server_running": self._running,
+                        "components_healthy": len(uninitialized_components) == 0,
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                }
+
+                if include_details:
+                    health_dict: Dict[str, Any] = result["health"]
+                    health_dict["components"] = components_status
+                    health_dict["configuration"] = {
+                        "development_mode": self.config.development_mode,
+                        "prometheus_url": self.config.prometheus_url,
+                        "krr_strategy": self.config.krr_strategy,
+                        "mock_mode": {
+                            "krr_responses": self.config.mock_krr_responses,
+                            "kubectl_commands": self.config.mock_kubectl_commands,
+                        },
+                    }
+
+                    # Add version information
+                    health_dict["versions"] = {
+                        "server_version": "1.0.0",
+                        "tools_registered": (
+                            len(self.mcp._tools) if hasattr(self.mcp, "_tools") else 0
+                        ),
+                    }
+
+                return result
+
+            except Exception as e:
+                self.logger.error("Health check failed", error=str(e))
+                return {
+                    "status": "error",
+                    "health": {
+                        "overall_status": "unhealthy",
+                        "error": str(e),
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                    "error": str(e),
+                    "error_code": "HEALTH_CHECK_FAILED",
+                }
+
+        @self.mcp.tool()
+        @versioned_tool(
+            version="1.0.0",
+            changelog=[
                 "Initial implementation with comprehensive version tracking",
                 "Support for deprecation warnings and migration guides",
                 "Backward compatibility checking",

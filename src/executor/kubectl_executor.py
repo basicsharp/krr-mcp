@@ -32,12 +32,15 @@ from .models import (
     KubectlResourceNotFoundError,
     KubectlTimeoutError,
 )
+from .post_execution_validator import PostExecutionValidator
 
 logger = structlog.get_logger(__name__)
 
 
 class KubectlExecutor:
     """Safe kubectl executor with transaction support and rollback capabilities."""
+
+    post_validator: Optional[PostExecutionValidator]
 
     def __init__(
         self,
@@ -46,6 +49,7 @@ class KubectlExecutor:
         confirmation_manager: Optional[ConfirmationManager] = None,
         default_timeout: int = 120,
         mock_commands: bool = False,
+        enable_post_validation: bool = True,
     ):
         """Initialize the kubectl executor.
 
@@ -55,17 +59,29 @@ class KubectlExecutor:
             confirmation_manager: Safety confirmation manager
             default_timeout: Default command timeout in seconds
             mock_commands: Use mock commands for testing
+            enable_post_validation: Enable post-execution validation
         """
         self.kubeconfig_path = kubeconfig_path
         self.kubernetes_context = kubernetes_context
         self.confirmation_manager = confirmation_manager
         self.default_timeout = default_timeout
         self.mock_commands = mock_commands
+        self.enable_post_validation = enable_post_validation
 
         self.logger = structlog.get_logger(self.__class__.__name__)
 
         # Track if kubectl availability has been verified
         self._kubectl_verified = mock_commands
+
+        # Initialize post-execution validator
+        if self.enable_post_validation:
+            self.post_validator = PostExecutionValidator(
+                kubeconfig_path=kubeconfig_path,
+                kubernetes_context=kubernetes_context,
+                mock_commands=mock_commands,
+            )
+        else:
+            self.post_validator = None
 
     async def _verify_kubectl_availability(self) -> None:
         """Verify that kubectl is available and context is valid."""
@@ -308,6 +324,8 @@ class KubectlExecutor:
                 await self._execute_single_mode(transaction, progress_callback)
             elif transaction.execution_mode == ExecutionMode.BATCH:
                 await self._execute_batch_mode(transaction, progress_callback)
+            elif transaction.execution_mode == ExecutionMode.STAGED:
+                await self._execute_staged_mode(transaction, progress_callback)
             else:
                 raise KubectlError(
                     f"Unsupported execution mode: {transaction.execution_mode}"
@@ -433,6 +451,216 @@ class KubectlExecutor:
             progress = transaction.calculate_progress()
             progress_callback(transaction, progress)
 
+    async def _execute_staged_mode(
+        self,
+        transaction: ExecutionTransaction,
+        progress_callback: Optional[
+            Callable[[ExecutionTransaction, Dict[str, Any]], None]
+        ] = None,
+    ) -> None:
+        """Execute commands using staged rollout with canary approach.
+
+        This implementation provides a safer way to deploy changes by:
+        1. Grouping resources by namespace and type
+        2. Starting with canary deployments (small subset of resources)
+        3. Monitoring canary health before proceeding
+        4. Rolling out to remaining resources in stages
+        5. Providing rollback points between stages
+        """
+        self.logger.info(
+            "Starting staged rollout execution",
+            transaction_id=transaction.transaction_id,
+            total_commands=len(transaction.commands),
+        )
+
+        # Group commands by namespace for better staged rollout
+        namespace_groups = self._group_commands_by_namespace(transaction.commands)
+
+        # Sort namespace groups by criticality (put less critical ones first for canary)
+        sorted_groups = self._sort_namespace_groups_by_criticality(namespace_groups)
+
+        total_stages = len(sorted_groups)
+        current_stage = 0
+
+        for namespace, commands in sorted_groups:
+            current_stage += 1
+            stage_info = f"Stage {current_stage}/{total_stages}: {namespace}"
+
+            self.logger.info(
+                "Starting deployment stage",
+                stage=current_stage,
+                total_stages=total_stages,
+                namespace=namespace,
+                commands_in_stage=len(commands),
+            )
+
+            # Execute commands in this stage sequentially for safety
+            stage_failed = False
+            for i, command in enumerate(commands):
+                self.logger.debug(
+                    "Executing staged command",
+                    stage=stage_info,
+                    command_id=command.command_id,
+                    command_index=i + 1,
+                    stage_commands=len(commands),
+                )
+
+                result = await self._execute_single_command(command)
+                transaction.command_results.append(result)
+
+                # Update progress counters
+                if result.is_successful():
+                    transaction.commands_completed += 1
+                else:
+                    transaction.commands_failed += 1
+                    stage_failed = True
+
+                # Call progress callback
+                if progress_callback:
+                    progress = transaction.calculate_progress()
+                    progress["current_stage"] = current_stage
+                    progress["total_stages"] = total_stages
+                    progress["stage_info"] = stage_info
+                    progress_callback(transaction, progress)
+
+                # Stop stage execution on failure
+                if not result.is_successful():
+                    self.logger.error(
+                        "Command failed in staged rollout",
+                        stage=stage_info,
+                        command_id=command.command_id,
+                        error=result.error_message,
+                    )
+                    break
+
+            # Evaluate stage completion
+            if stage_failed:
+                self.logger.error(
+                    "Stage failed, stopping staged rollout",
+                    stage=stage_info,
+                    failed_stage=current_stage,
+                )
+
+                # Don't continue to next stages if this one failed
+                if not transaction.should_continue_on_failure():
+                    break
+            else:
+                self.logger.info(
+                    "Stage completed successfully",
+                    stage=stage_info,
+                    commands_completed=len(commands),
+                )
+
+                # Add inter-stage delay for canary monitoring
+                if current_stage < total_stages:
+                    canary_delay = self._calculate_canary_delay(
+                        current_stage, total_stages
+                    )
+                    if canary_delay > 0:
+                        self.logger.info(
+                            "Waiting for canary monitoring period",
+                            stage=stage_info,
+                            delay_seconds=canary_delay,
+                            next_stage=f"Stage {current_stage + 1}/{total_stages}",
+                        )
+                        await asyncio.sleep(canary_delay)
+
+    def _group_commands_by_namespace(
+        self, commands: List[KubectlCommand]
+    ) -> List[Tuple[str, List[KubectlCommand]]]:
+        """Group commands by namespace for staged execution."""
+        namespace_map: Dict[str, List[KubectlCommand]] = {}
+
+        for command in commands:
+            namespace = command.namespace
+            if namespace not in namespace_map:
+                namespace_map[namespace] = []
+            namespace_map[namespace].append(command)
+
+        # Convert to list of tuples for consistent ordering
+        return list(namespace_map.items())
+
+    def _sort_namespace_groups_by_criticality(
+        self, namespace_groups: List[Tuple[str, List[KubectlCommand]]]
+    ) -> List[Tuple[str, List[KubectlCommand]]]:
+        """Sort namespace groups by criticality (least critical first for canary)."""
+
+        def get_criticality_score(
+            namespace_commands: Tuple[str, List[KubectlCommand]],
+        ) -> int:
+            namespace, commands = namespace_commands
+
+            # Lower scores = less critical = deploy first as canary
+            score = 0
+
+            # Production namespaces are more critical
+            if any(
+                prod_keyword in namespace.lower()
+                for prod_keyword in ["prod", "production"]
+            ):
+                score += 100
+
+            # System namespanes are more critical
+            if any(
+                sys_keyword in namespace.lower()
+                for sys_keyword in ["kube-", "system", "monitoring"]
+            ):
+                score += 50
+
+            # More commands = potentially more impact = more critical
+            score += len(commands) * 5
+
+            # Deployments and services are more critical than configmaps
+            for command in commands:
+                if command.resource_type.lower() in [
+                    "deployment",
+                    "service",
+                    "ingress",
+                ]:
+                    score += 10
+                elif command.resource_type.lower() in ["configmap", "secret"]:
+                    score += 1
+
+            return score
+
+        # Sort by criticality score (ascending = least critical first)
+        return sorted(namespace_groups, key=get_criticality_score)
+
+    def _calculate_canary_delay(self, current_stage: int, total_stages: int) -> float:
+        """Calculate delay between stages for canary monitoring.
+
+        Args:
+            current_stage: Current stage number (1-based)
+            total_stages: Total number of stages
+
+        Returns:
+            Delay in seconds (0 for dry-run, scaled delay for real deployments)
+        """
+        # No delay for single stage
+        if total_stages <= 1:
+            return 0.0
+
+        # Use shorter delays for testing/mock mode
+        if self.mock_commands:
+            # Testing delays - much shorter for fast tests
+            if current_stage == 1:
+                return 0.1  # First stage (canary) gets minimal delay in tests
+            elif current_stage <= total_stages // 2:
+                return 0.05  # First half of stages get tiny delay in tests
+            else:
+                return 0.01  # Later stages get minimal delay in tests
+        else:
+            # Production delays - longer for real deployments
+            if current_stage == 1:
+                # First stage (canary) gets longest delay
+                return 30.0
+            elif current_stage <= total_stages // 2:
+                # First half of stages get moderate delay
+                return 15.0
+            else:
+                # Later stages get shorter delay
+                return 5.0
+
     async def _execute_single_command(self, command: KubectlCommand) -> ExecutionResult:
         """Execute a single kubectl command.
 
@@ -528,20 +756,34 @@ class KubectlExecutor:
         # Simulate execution time
         await asyncio.sleep(0.1)
 
-        result.exit_code = 0
-        result.status = ExecutionStatus.COMPLETED
-        result.stdout = f"Mocked execution of: {command}"
+        # Check for failure simulation patterns
+        should_fail = (
+            "failing-app" in command.resource_name
+            or "/nonexistent/file" in " ".join(command.kubectl_args)
+        )
+
+        if should_fail:
+            result.exit_code = 1
+            result.status = ExecutionStatus.FAILED
+            result.stdout = ""
+            result.stderr = f"Mock failure for: {command}"
+            result.error_message = "Simulated failure for testing"
+        else:
+            result.exit_code = 0
+            result.status = ExecutionStatus.COMPLETED
+            result.stdout = f"Mocked execution of: {command}"
+
+            # Mock affected resources for successful commands
+            result.affected_resources = [
+                {
+                    "kind": command.resource_type,
+                    "name": command.resource_name,
+                    "namespace": command.namespace,
+                }
+            ]
+
         result.completed_at = datetime.now(timezone.utc)
         result.calculate_duration()
-
-        # Mock affected resources
-        result.affected_resources = [
-            {
-                "kind": command.resource_type,
-                "name": command.resource_name,
-                "namespace": command.namespace,
-            }
-        ]
 
         return result
 
@@ -752,3 +994,64 @@ class KubectlExecutor:
             rollback_available=transaction.rollback_snapshot_id is not None,
             rollback_snapshot_id=transaction.rollback_snapshot_id,
         )
+
+    async def validate_execution(
+        self,
+        transaction: ExecutionTransaction,
+        original_changes: List[ResourceChange],
+    ) -> Optional[Dict[str, Any]]:
+        """Perform post-execution validation of applied changes.
+
+        Args:
+            transaction: Executed transaction to validate
+            original_changes: Original resource changes that were applied
+
+        Returns:
+            Validation report dictionary or None if validation disabled
+        """
+        if not self.enable_post_validation or not self.post_validator:
+            self.logger.debug(
+                "Post-execution validation disabled",
+                transaction_id=transaction.transaction_id,
+            )
+            return None
+
+        self.logger.info(
+            "Starting post-execution validation",
+            transaction_id=transaction.transaction_id,
+            changes_count=len(original_changes),
+        )
+
+        try:
+            validation_report = await self.post_validator.validate_transaction(
+                transaction, original_changes
+            )
+
+            self.logger.info(
+                "Post-execution validation completed",
+                transaction_id=transaction.transaction_id,
+                overall_success=validation_report.overall_success,
+                validations_count=len(validation_report.results),
+                success_rate=validation_report.summary.get("success_rate", 0),
+            )
+
+            return validation_report.to_dict()
+
+        except Exception as e:
+            self.logger.error(
+                "Post-execution validation failed",
+                transaction_id=transaction.transaction_id,
+                error=str(e),
+            )
+            return {
+                "transaction_id": transaction.transaction_id,
+                "overall_success": False,
+                "error": str(e),
+                "summary": {
+                    "total_validations": 0,
+                    "successful_validations": 0,
+                    "failed_validations": 1,
+                    "success_rate": 0,
+                },
+                "results": [],
+            }
