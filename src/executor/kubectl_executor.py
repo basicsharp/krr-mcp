@@ -64,9 +64,8 @@ class KubectlExecutor:
 
         self.logger = structlog.get_logger(self.__class__.__name__)
 
-        # Verify kubectl availability on initialization
-        if not mock_commands:
-            asyncio.create_task(self._verify_kubectl_availability())
+        # Track if kubectl availability has been verified
+        self._kubectl_verified = mock_commands
 
     async def _verify_kubectl_availability(self) -> None:
         """Verify that kubectl is available and context is valid."""
@@ -145,6 +144,11 @@ class KubectlExecutor:
         Returns:
             Created ExecutionTransaction
         """
+        # Verify kubectl availability on first use
+        if not self._kubectl_verified:
+            await self._verify_kubectl_availability()
+            self._kubectl_verified = True
+
         self.logger.info(
             "Creating execution transaction",
             changes_count=len(changes),

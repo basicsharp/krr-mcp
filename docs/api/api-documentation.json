@@ -2,7 +2,7 @@
   "metadata": {
     "server_name": "krr-mcp-server",
     "version": "1.0.0",
-    "generated_at": "2025-07-29T16:36:57.350502",
+    "generated_at": "2025-07-30T19:54:24.351424",
     "description": "MCP server for safe Kubernetes resource optimization using krr",
     "safety_notice": "CRITICAL: This server implements comprehensive safety controls. No Kubernetes resources are modified without explicit user confirmation."
   },

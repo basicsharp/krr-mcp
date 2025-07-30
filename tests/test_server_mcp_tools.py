@@ -227,10 +227,8 @@ class TestPreviewChangesTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = (
-                await server.confirmation_manager.safety_validator.validate_changes(
-                    changes
-                )
+            assessment = server.confirmation_manager.safety_validator.validate_changes(
+                changes
             )
 
             assert assessment.overall_risk_level == RiskLevel.HIGH
@@ -549,10 +547,8 @@ class TestAnalyzeSafetyTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = (
-                await server.confirmation_manager.safety_validator.validate_changes(
-                    changes
-                )
+            assessment = server.confirmation_manager.safety_validator.validate_changes(
+                changes
             )
 
             assert assessment.overall_risk_level == RiskLevel.LOW
@@ -592,10 +588,8 @@ class TestAnalyzeSafetyTool:
             )
             mock_analyze.return_value = mock_assessment
 
-            assessment = (
-                await server.confirmation_manager.safety_validator.validate_changes(
-                    changes
-                )
+            assessment = server.confirmation_manager.safety_validator.validate_changes(
+                changes
             )
 
             assert assessment.overall_risk_level == RiskLevel.MEDIUM
@@ -671,7 +665,8 @@ class TestGenerateDocumentationTool:
         assert doc_generator is not None
 
         # Test that it can generate documentation
-        docs = doc_generator.generate_markdown_content()
+        full_docs = doc_generator.generate_full_documentation()
+        docs = doc_generator._generate_markdown_content(full_docs)
         assert isinstance(docs, str)
         assert len(docs) > 0
 

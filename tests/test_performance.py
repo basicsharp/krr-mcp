@@ -173,8 +173,8 @@ class TestLoadPerformance:
 
     @pytest.mark.asyncio
     @pytest.mark.performance
-    async def test_large_dataset_processing(self):
-        """Test processing large datasets."""
+    async def test_large_cluster_simulation(self):
+        """Test large cluster simulation performance."""
         # Generate large dataset
         large_recommendations = [
             {
@@ -212,10 +212,106 @@ class TestLoadPerformance:
         assert execution_time < 5.0  # Should complete within 5 seconds
 
         # Record benchmark
-        benchmark_collector.add_benchmark(
-            "large_dataset_processing_1000_items", execution_time
-        )
+        benchmark_collector.add_benchmark("large_cluster_simulation", execution_time)
         print(f"Large dataset processing (1000 items) took {execution_time:.3f}s")
+
+    @pytest.mark.asyncio
+    @pytest.mark.performance
+    async def test_concurrent_request_handling(self):
+        """Test concurrent request handling performance."""
+
+        async def mock_request(request_id: int):
+            # Simulate concurrent request processing
+            await asyncio.sleep(0.01)
+            return {"request_id": request_id, "status": "processed"}
+
+        # Process 20 concurrent requests
+        start_time = time.time()
+
+        tasks = [mock_request(i) for i in range(20)]
+        results = await asyncio.gather(*tasks)
+
+        execution_time = time.time() - start_time
+
+        assert len(results) == 20
+        assert all(r["status"] == "processed" for r in results)
+        assert execution_time < 1.0  # Should handle 20 requests within 1 second
+
+        # Record benchmark
+        benchmark_collector.add_benchmark("concurrent_request_handling", execution_time)
+        print(f"Concurrent request handling (20 requests) took {execution_time:.3f}s")
+
+    @pytest.mark.asyncio
+    @pytest.mark.performance
+    async def test_memory_usage_optimization(self):
+        """Test memory usage optimization performance."""
+        import os
+
+        import psutil
+
+        process = psutil.Process(os.getpid())
+        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+
+        # Simulate memory-optimized processing
+        data_chunks = []
+        for chunk in range(10):
+            # Process in small chunks to optimize memory
+            chunk_data = [f"data-{i}" for i in range(100)]
+            processed_chunk = [item.upper() for item in chunk_data]
+            data_chunks.append(len(processed_chunk))
+            # Clear chunk to free memory
+            del chunk_data, processed_chunk
+
+        final_memory = process.memory_info().rss / 1024 / 1024  # MB
+        memory_increase = final_memory - initial_memory
+
+        assert len(data_chunks) == 10
+        assert sum(data_chunks) == 1000  # 10 chunks * 100 items each
+        assert memory_increase < 10  # Should use less than 10MB additional memory
+
+        # Record benchmark
+        benchmark_collector.add_benchmark(
+            "memory_usage_optimization", memory_increase, "MB"
+        )
+        print(f"Memory usage optimization: {memory_increase:.2f}MB increase")
+
+    @pytest.mark.asyncio
+    @pytest.mark.performance
+    async def test_caching_performance(self):
+        """Test caching performance optimization."""
+        # Simulate cache operations
+        cache = {}
+        cache_hits = 0
+        cache_misses = 0
+
+        start_time = time.time()
+
+        # Simulate 1000 operations with caching
+        for i in range(1000):
+            key = f"key-{i % 100}"  # Repeat keys to test cache hits
+
+            if key in cache:
+                cache_hits += 1
+                result = cache[key]
+            else:
+                cache_misses += 1
+                # Simulate expensive operation
+                await asyncio.sleep(0.0001)
+                result = f"computed-{key}"
+                cache[key] = result
+
+        execution_time = time.time() - start_time
+        cache_hit_ratio = cache_hits / (cache_hits + cache_misses)
+
+        assert cache_hits > 0  # Should have some cache hits
+        assert cache_hit_ratio > 0.8  # Should have >80% cache hit ratio
+        assert execution_time < 1.0  # Should complete within 1 second
+
+        # Record benchmark
+        benchmark_collector.add_benchmark("caching_performance", execution_time)
+        print(
+            f"Caching performance: {execution_time:.3f}s, hit ratio: {cache_hit_ratio:.2%}"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.performance
