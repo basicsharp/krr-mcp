@@ -5,10 +5,9 @@ backward compatibility, deprecation warnings, and smooth upgrades.
 """
 
 import functools
-import warnings
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 import structlog
 from pydantic import BaseModel, Field

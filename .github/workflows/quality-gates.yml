@@ -39,11 +39,11 @@ jobs:
       - name: Run comprehensive test suite
         run: |
           # Run all test suites with comprehensive coverage
-          uv run python scripts/run_tests.py --suite safety --timeout-minutes 5
-          uv run python scripts/run_tests.py --suite unit --timeout-minutes 10
-          uv run python scripts/run_tests.py --suite integration --timeout-minutes 8
-          uv run python scripts/run_tests.py --suite performance --timeout-minutes 6
-          uv run python scripts/run_tests.py --suite chaos --timeout-minutes 6
+          uv run python scripts/run_tests.py --suite safety --verbose
+          uv run python scripts/run_tests.py --suite unit --verbose
+          uv run python scripts/run_tests.py --suite integration --verbose
+          uv run python scripts/run_tests.py --suite performance --verbose
+          uv run python scripts/run_tests.py --suite chaos --verbose
 
       - name: Generate comprehensive coverage report
         run: |
