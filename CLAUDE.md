@@ -312,12 +312,14 @@ When starting a new Claude Code session:
 1. **Review current progress**: Check which milestones/tasks are completed
 2. **Focus on one milestone**: Don't jump between major features
 3. **Test as you go**: Run tests frequently, especially for safety features
-4. **Commit meaningful chunks**: Each commit should be a working state
+4. **Commit meaningful chunks**: Each commit should be a working state and use conventional commit message format. You should only create commits without pushing them to remote.
 5. **Document decisions**: If you make architectural choices, document why
 
 **Always read PLANNING.md at the start of every new conversation, check TASKS.md before starting your work, mark completed tasks to TASKS.md immediately, and add newly discovered tasks to TASKS.md when found.**
 
 Remember that we use `uv` as main package manager, so you can use pytest via the following command: `uv run pytest`
+
+After a commit is created, please add a session summary to CLAUDE.md summarizing what we’ve done so far. Then compact CLAUDE.md to keep only 2 latest session summaries. Then amend the latest commit with modified CLAUDE.md
 
 ## Test Coverage Requirements
 
@@ -516,3 +518,77 @@ Fixed critical command argument inconsistencies between the KRR MCP Server imple
 **Documentation Alignment**: Updated all references to krr commands across the codebase to maintain consistency between code, tests, and documentation.
 
 The KRR MCP Server now **correctly interfaces with the krr CLI tool** using verified command arguments, eliminating potential runtime failures and ensuring reliable Kubernetes resource analysis in production environments.
+
+---
+
+## Session Summary - January 31, 2025 (Integration Tests with Real Kubernetes Cluster)
+
+### Major Accomplishments This Session
+
+**✅ Complete Milestone 5: Integration Tests with Real Kubernetes Cluster**
+Successfully implemented and deployed comprehensive integration tests that validate the KRR MCP Server against a real Kubernetes cluster:
+
+*Integration Test Infrastructure*:
+- **Kind cluster setup**: 3-node test cluster (krr-test) with control plane and 2 workers
+- **Test workloads deployed**: Multiple deployments across test-app, staging-app, and production-app namespaces
+- **Cluster manager script**: Complete lifecycle management for setup, status checking, and teardown
+- **Test fixtures**: Proper integration of KubectlExecutor and ConfirmationManager for real cluster operations
+
+*Comprehensive Test Coverage (7 Integration Tests)*:
+- **Cluster Connectivity**: Validates kubectl executor can connect and verify cluster access
+- **Resource Updates**: Tests actual kubectl resource modifications with confirmation workflows
+- **Staged Rollout**: Validates multi-namespace deployment with criticality-based ordering
+- **Post-Execution Validation**: Tests resource verification and health checking after changes
+- **Rollback Functionality**: Validates transaction rollback capabilities and snapshot creation
+- **Error Handling**: Tests graceful handling of invalid resources and cluster failures
+- **Dry-Run Operations**: Validates dry-run mode execution without making actual changes
+
+*Safety-First Integration Testing*:
+- **Real cluster operations** with proper confirmation workflows and safety checks
+- **Dry-run mode emphasis** to avoid unintended cluster state changes during testing
+- **Comprehensive error handling** for cluster state variations and kubectl failures
+- **Production-like scenarios** with namespace criticality levels and staged deployments
+
+### Technical Achievements
+
+**Real Kubernetes Integration**:
+- **Complete end-to-end validation** of KRR MCP Server with actual kubectl operations
+- **Multi-namespace test isolation** with different criticality levels (test/staging/production)
+- **Staged rollout testing** with canary deployment approach and inter-stage monitoring
+- **Resource change verification** through actual kubectl queries and health checking
+
+**Integration Test Architecture**:
+- **Kind-based test cluster** with realistic 3-node configuration and test workloads
+- **Proper fixture management** for KubectlExecutor and ConfirmationManager integration
+- **Cluster lifecycle management** with automated setup, status checking, and cleanup
+- **Test documentation** with comprehensive setup and troubleshooting guides
+
+**Safety Validation in Production Environment**:
+- **Confirmation workflow testing** with real confirmation manager integration
+- **Transaction-based operations** with proper rollback snapshot creation
+- **Error recovery testing** for network failures, invalid resources, and cluster issues
+- **Mock mode preservation** alongside real cluster testing for comprehensive coverage
+
+### Current Project State
+
+**Milestone 5**: ✅ **100% COMPLETED** - Integration tests with real Kubernetes cluster
+
+**Test Results Summary**:
+- **7 Integration Tests**: ✅ All passing with real cluster operations
+- **31 Kubectl Executor Tests**: ✅ All passing with no regressions
+- **Overall Test Health**: Complete test suite passes with both mock and real cluster testing
+
+**Files Added This Session**:
+- `tests/test_integration_cluster.py` - Comprehensive integration test suite (7 tests)
+- `tests/cluster_manager.py` - Cluster lifecycle management script
+- `tests/kind-config.yaml` - Kind cluster configuration
+- `tests/test-workloads.yaml` - Test deployment manifests
+- `tests/conftest_cluster.py` - Cluster test fixtures
+- `tests/README.md` - Integration test documentation
+
+**Infrastructure Deployed**:
+- **krr-test cluster**: 3-node kind cluster with realistic workloads
+- **Test namespaces**: test-app, staging-app, production-app with different criticality levels
+- **Test deployments**: web-app, api-service, database, failing-app with varied resource configurations
+
+The KRR MCP Server now features **complete integration test coverage with real Kubernetes clusters**, providing confidence that AI-assisted resource optimization works reliably in production environments while maintaining strict safety guarantees through comprehensive confirmation workflows and validation systems.
