@@ -54,7 +54,7 @@ class TestRunner:
                     "--cov=src",
                     "--cov-report=term-missing",
                     "--cov-report=xml",
-                    "--cov-fail-under=74",  # Temporarily lowered for CI stability
+                    "--cov-fail-under=75",
                 ]
             )
 
@@ -83,7 +83,7 @@ class TestRunner:
             "pytest_cov",  # Explicitly load pytest-cov plugin
             "--cov=src",
             "--cov-append",  # Append to existing coverage
-            "--cov-fail-under=74",  # Temporarily lowered for CI stability
+            "--cov-fail-under=75",
             "-m",
             "integration or not integration",  # Run all integration tests
         ]
@@ -115,7 +115,7 @@ class TestRunner:
                     "pytest_cov",  # Explicitly load pytest-cov plugin
                     "--cov=src",
                     "--cov-append",
-                    "--cov-fail-under=74",  # Temporarily lowered for CI stability
+                    "--cov-fail-under=75",
                 ]
             )
 
@@ -156,7 +156,7 @@ class TestRunner:
             "pytest_cov",  # Explicitly load pytest-cov plugin
             "--cov=src",
             "--cov-append",
-            "--cov-fail-under=74",  # Temporarily lowered for CI stability
+            "--cov-fail-under=75",
             "-m",
             "chaos",
         ]
@@ -272,7 +272,7 @@ class TestRunner:
                 str(self.coverage_dir),
                 "--title",
                 "KRR MCP Server Coverage Report",
-                "--fail-under=74",  # Temporarily lowered for CI stability
+                "--fail-under=75",
             ]
 
             success = self._run_command(cmd, "Coverage HTML report")
@@ -293,7 +293,7 @@ class TestRunner:
             "xml",
             "-o",
             str(self.reports_dir / "coverage.xml"),
-            "--fail-under=74",  # Temporarily lowered for CI stability
+            "--fail-under=75",
         ]
 
         self._run_command(xml_cmd, "Coverage XML report")
@@ -330,13 +330,13 @@ class TestRunner:
                 coverage = float(coverage_percent)
                 print(f"📊 Total coverage: {coverage}%")
 
-                if coverage >= 74.0:
+                if coverage >= 75.0:
                     print(
-                        f"✅ Required test coverage of 74% reached. Total coverage: {coverage:.2f}%"
+                        f"✅ Required test coverage of 75% reached. Total coverage: {coverage:.2f}%"
                     )
                     return True
                 else:
-                    print(f"❌ Coverage {coverage}% below required 74%!")
+                    print(f"❌ Coverage {coverage}% below required 75%!")
                     return False
             except ValueError:
                 print("❌ Could not parse coverage percentage!")
