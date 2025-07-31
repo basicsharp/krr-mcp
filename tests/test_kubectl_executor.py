@@ -755,3 +755,279 @@ class TestTransactionReporting:
             completed_transaction = await executor.execute_transaction(transaction)
 
             assert completed_transaction.rollback_snapshot_id is not None
+
+
+class TestKubectlExecutorEdgeCases:
+    """Test edge cases and error conditions for kubectl executor."""
+
+    @pytest.mark.asyncio
+    async def test_execute_real_command_failure(self):
+        """Test executing real command that fails."""
+        executor = KubectlExecutor(mock_commands=False)
+
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="Deployment",
+            resource_name="nonexistent-deployment",
+            namespace="default",
+            kubectl_args=["kubectl", "patch", "deployment", "nonexistent-deployment"],
+            manifest_content='{"spec": {"replicas": 3}}',
+            dry_run=False,
+        )
+
+        # Mock failed subprocess execution
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.communicate.return_value = (b"", b"deployment not found")
+            mock_process.returncode = 1
+            mock_subprocess.return_value = mock_process
+
+            result = await executor._execute_single_command(command)
+
+            assert isinstance(result, ExecutionResult)
+            assert result.status == ExecutionStatus.FAILED
+            assert result.exit_code == 1
+            assert "deployment not found" in result.stderr
+
+    @pytest.mark.asyncio
+    async def test_execute_transaction_staged_mode(self):
+        """Test executing transaction in staged mode."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        # Create changes across multiple namespaces
+        changes = [
+            ResourceChange(
+                object_name="dev-app",
+                namespace="development",
+                object_kind="Deployment",
+                change_type="resource_increase",
+                current_values={"cpu": "100m", "memory": "128Mi"},
+                proposed_values={"cpu": "200m", "memory": "256Mi"},
+                cpu_change_percent=100.0,
+                memory_change_percent=100.0,
+            ),
+            ResourceChange(
+                object_name="prod-app",
+                namespace="production",
+                object_kind="Deployment",
+                change_type="resource_increase",
+                current_values={"cpu": "500m", "memory": "512Mi"},
+                proposed_values={"cpu": "1000m", "memory": "1Gi"},
+                cpu_change_percent=100.0,
+                memory_change_percent=100.0,
+            ),
+        ]
+
+        transaction = await executor.create_transaction(
+            changes=changes,
+            confirmation_token_id="test-token-123",
+            execution_mode=ExecutionMode.STAGED,
+            dry_run=False,
+        )
+
+        completed_transaction = await executor.execute_transaction(transaction)
+
+        assert isinstance(completed_transaction, ExecutionTransaction)
+        assert completed_transaction.execution_mode == ExecutionMode.STAGED
+        assert len(completed_transaction.commands) == 2
+
+    @pytest.mark.asyncio
+    async def test_manifest_generation_with_complex_resources(self):
+        """Test manifest generation for complex resource configurations."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        change = ResourceChange(
+            object_name="complex-deployment",
+            namespace="custom-namespace",
+            object_kind="Deployment",
+            change_type="resource_increase",
+            current_values={
+                "cpu": "2000m",
+                "memory": "2Gi",
+                "ephemeral-storage": "10Gi",
+            },
+            proposed_values={
+                "cpu": "4000m",
+                "memory": "4Gi",
+                "ephemeral-storage": "20Gi",
+            },
+            cpu_change_percent=100.0,
+            memory_change_percent=100.0,
+        )
+
+        command = await executor._generate_kubectl_command(change, dry_run=False)
+
+        assert isinstance(command, KubectlCommand)
+        assert command.resource_name == "complex-deployment"
+        assert command.namespace == "custom-namespace"
+        assert command.dry_run is False
+
+    @pytest.mark.asyncio
+    async def test_get_current_manifest_timeout(self):
+        """Test getting current manifest with timeout."""
+        executor = KubectlExecutor(mock_commands=False)
+
+        # Mock subprocess with timeout
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.communicate.side_effect = asyncio.TimeoutError()
+            mock_subprocess.return_value = mock_process
+
+            with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
+                manifest = await executor._get_current_manifest(
+                    "Deployment", "timeout-deployment", "default"
+                )
+
+                assert manifest is None
+
+    @pytest.mark.asyncio
+    async def test_create_transaction_with_empty_changes(self):
+        """Test creating transaction with empty changes list."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        transaction = await executor.create_transaction(
+            changes=[],
+            confirmation_token_id="test-token-123",
+            execution_mode=ExecutionMode.SINGLE,
+            dry_run=True,
+        )
+
+        assert isinstance(transaction, ExecutionTransaction)
+        assert len(transaction.commands) == 0
+
+    @pytest.mark.asyncio
+    async def test_rollback_snapshot_creation_without_confirmation_manager(self):
+        """Test rollback snapshot creation without confirmation manager."""
+        executor = KubectlExecutor(mock_commands=True)  # No confirmation manager
+
+        commands = [
+            KubectlCommand(
+                operation="patch",
+                resource_type="Deployment",
+                resource_name="test-deployment",
+                namespace="default",
+                kubectl_args=["kubectl", "patch", "deployment", "test-deployment"],
+                manifest_content='{"spec": {"replicas": 3}}',
+                dry_run=False,
+            )
+        ]
+
+        transaction = ExecutionTransaction(
+            confirmation_token_id="test-token", commands=commands
+        )
+
+        snapshot_id = await executor._create_rollback_snapshot(transaction)
+
+        # Should return None when no confirmation manager is set
+        assert snapshot_id is None
+
+    @pytest.mark.asyncio
+    async def test_execute_mock_command_with_failure_simulation(self):
+        """Test mock command execution with failure simulation."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        # Use a resource name that triggers mock failure
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="Deployment",
+            resource_name="failing-app",  # This should trigger mock failure
+            namespace="default",
+            kubectl_args=["kubectl", "patch", "deployment", "failing-app"],
+            manifest_content='{"spec": {"replicas": 3}}',
+            dry_run=False,
+        )
+
+        result = ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.PENDING,
+            started_at=datetime.now(timezone.utc),
+            exit_code=-1,
+        )
+
+        result = await executor._execute_mock_command(command, result)
+
+        # Should still succeed in most cases (mock mode is permissive)
+        assert isinstance(result, ExecutionResult)
+        assert result.status in [ExecutionStatus.COMPLETED, ExecutionStatus.FAILED]
+
+    @pytest.mark.asyncio
+    async def test_verify_cluster_access_with_context_and_kubeconfig(self):
+        """Test cluster access verification with both context and kubeconfig."""
+        executor = KubectlExecutor(
+            kubernetes_context="custom-context",
+            kubeconfig_path="/custom/kubeconfig",
+            mock_commands=True,
+        )
+
+        # Mock successful cluster access
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.communicate.return_value = (b"cluster info", b"")
+            mock_process.returncode = 0
+            mock_subprocess.return_value = mock_process
+
+            await executor._verify_cluster_access()
+
+            # Verify the command includes both context and kubeconfig
+            mock_subprocess.assert_called_once()
+            args = mock_subprocess.call_args[0]
+            assert "--context" in args
+            assert "custom-context" in args
+            assert "--kubeconfig" in args
+            assert "/custom/kubeconfig" in args
+
+    @pytest.mark.asyncio
+    async def test_kubectl_command_with_special_characters(self):
+        """Test kubectl command generation with special characters in names."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        change = ResourceChange(
+            object_name="app-with-special-chars-123",
+            namespace="namespace-with-dashes",
+            object_kind="Deployment",
+            change_type="resource_increase",
+            current_values={"cpu": "100m", "memory": "128Mi"},
+            proposed_values={"cpu": "200m", "memory": "256Mi"},
+            cpu_change_percent=100.0,
+            memory_change_percent=100.0,
+        )
+
+        command = await executor._generate_kubectl_command(change, dry_run=True)
+
+        assert command.resource_name == "app-with-special-chars-123"
+        assert command.namespace == "namespace-with-dashes"
+        assert command.dry_run is True
+
+    @pytest.mark.asyncio
+    async def test_transaction_execution_report_summary(self):
+        """Test transaction execution report summary generation."""
+        executor = KubectlExecutor(mock_commands=True)
+
+        changes = [
+            ResourceChange(
+                object_name=f"test-deployment-{i}",
+                namespace="default",
+                object_kind="Deployment",
+                change_type="resource_increase",
+                current_values={"cpu": "100m", "memory": "128Mi"},
+                proposed_values={"cpu": "200m", "memory": "256Mi"},
+                cpu_change_percent=100.0,
+                memory_change_percent=100.0,
+            )
+            for i in range(5)
+        ]
+
+        transaction = await executor.create_transaction(
+            changes=changes,
+            confirmation_token_id="test-token-123",
+            execution_mode=ExecutionMode.BATCH,
+            dry_run=False,
+        )
+
+        completed_transaction = await executor.execute_transaction(transaction)
+
+        # Verify transaction completeness
+        assert len(completed_transaction.commands) == 5
+        assert len(completed_transaction.command_results) == 5
+        assert completed_transaction.commands_completed > 0
+        assert completed_transaction.overall_status == ExecutionStatus.COMPLETED

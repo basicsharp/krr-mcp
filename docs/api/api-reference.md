@@ -1,6 +1,6 @@
 # KRR MCP Server API Reference
 
-Generated on: 2025-07-31T21:17:35.049578
+Generated on: 2025-07-31T21:35:15.044023
 
 MCP server for safe Kubernetes resource optimization using krr
 

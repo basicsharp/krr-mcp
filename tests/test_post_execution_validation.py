@@ -730,3 +730,400 @@ class TestKubectlExecutorValidation:
         assert validation_report["overall_success"] is True  # No validations to fail
         assert validation_report["summary"]["total_validations"] == 0
         assert len(validation_report["results"]) == 0
+
+
+class TestPostExecutionValidatorEdgeCases:
+    """Test edge cases and error conditions for post-execution validation."""
+
+    @pytest.fixture
+    def non_mock_validator(self) -> PostExecutionValidator:
+        """Create a post-execution validator without mock mode."""
+        return PostExecutionValidator(
+            kubeconfig_path="~/.kube/config",
+            kubernetes_context="test-context",
+            mock_commands=False,  # Non-mock mode to test real execution paths
+            validation_timeout=60,
+            readiness_wait_time=1,  # Short wait for testing
+        )
+
+    @pytest.mark.asyncio
+    async def test_validation_error_handling(
+        self, non_mock_validator: PostExecutionValidator
+    ) -> None:
+        """Test validation error handling for unexpected exceptions."""
+        # Create a transaction that will cause validation errors
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="Deployment",
+            resource_name="test-app",
+            namespace="default",
+            kubectl_args=["patch", "deployment", "test-app"],
+        )
+
+        result = ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.COMPLETED,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            duration_seconds=1.0,
+            exit_code=0,
+            stdout="deployment.apps/test-app patched",
+        )
+
+        transaction = ExecutionTransaction(
+            confirmation_token_id="test-token-123",
+            commands=[command],
+            execution_mode=ExecutionMode.SINGLE,
+            dry_run=False,
+            command_results=[result],
+            overall_status=ExecutionStatus.COMPLETED,
+        )
+
+        changes = [
+            ResourceChange(
+                object_kind="Deployment",
+                object_name="test-app",
+                namespace="default",
+                change_type=ChangeType.RESOURCE_INCREASE,
+                current_values={"cpu": "100m", "memory": "128Mi"},
+                proposed_values={"cpu": "200m", "memory": "256Mi"},
+                cpu_change_percent=100.0,
+                memory_change_percent=100.0,
+                estimated_cost_impact=10.0,
+            )
+        ]
+
+        # Mock a scenario where validation itself throws an exception
+        with patch.object(
+            non_mock_validator,
+            "_get_resource_manifest",
+            side_effect=Exception("Network error"),
+        ):
+            report = await non_mock_validator.validate_transaction(transaction, changes)
+
+            # Should complete but with error results
+            assert report.overall_success is False
+            assert len(report.results) > 0
+
+            # Should have validation error results
+            error_results = [r for r in report.results if not r.success]
+            assert len(error_results) > 0
+
+    @pytest.mark.asyncio
+    async def test_resource_not_found_after_changes(
+        self, non_mock_validator: PostExecutionValidator
+    ) -> None:
+        """Test validation when resource is not found after applying changes."""
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="Deployment",
+            resource_name="missing-app",
+            namespace="default",
+            kubectl_args=["patch", "deployment", "missing-app"],
+        )
+
+        result = ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.COMPLETED,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            duration_seconds=1.0,
+            exit_code=0,
+            stdout="deployment.apps/missing-app patched",
+        )
+
+        transaction = ExecutionTransaction(
+            confirmation_token_id="test-token-123",
+            commands=[command],
+            execution_mode=ExecutionMode.SINGLE,
+            dry_run=False,
+            command_results=[result],
+            overall_status=ExecutionStatus.COMPLETED,
+        )
+
+        changes = [
+            ResourceChange(
+                object_kind="Deployment",
+                object_name="missing-app",
+                namespace="default",
+                change_type=ChangeType.RESOURCE_INCREASE,
+                current_values={"cpu": "100m"},
+                proposed_values={"cpu": "200m"},
+                cpu_change_percent=100.0,
+                memory_change_percent=0.0,
+                estimated_cost_impact=5.0,
+            )
+        ]
+
+        # Mock resource not found
+        with patch.object(
+            non_mock_validator, "_get_resource_manifest", return_value=None
+        ):
+            report = await non_mock_validator.validate_transaction(transaction, changes)
+
+            # Should complete but with failures
+            assert report.overall_success is False
+            assert len(report.results) > 0
+
+            # Should have "resource not found" failures
+            not_found_results = [
+                r
+                for r in report.results
+                if not r.success and "not found" in r.message.lower()
+            ]
+            assert len(not_found_results) > 0
+
+    @pytest.mark.asyncio
+    async def test_validation_timeout_scenarios(
+        self, non_mock_validator: PostExecutionValidator
+    ) -> None:
+        """Test validation scenarios with timeouts."""
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="Deployment",
+            resource_name="timeout-app",
+            namespace="default",
+            kubectl_args=["patch", "deployment", "timeout-app"],
+        )
+
+        result = ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.COMPLETED,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            duration_seconds=1.0,
+            exit_code=0,
+            stdout="deployment.apps/timeout-app patched",
+        )
+
+        transaction = ExecutionTransaction(
+            confirmation_token_id="test-token-123",
+            commands=[command],
+            execution_mode=ExecutionMode.SINGLE,
+            dry_run=False,
+            command_results=[result],
+            overall_status=ExecutionStatus.COMPLETED,
+        )
+
+        changes = [
+            ResourceChange(
+                object_kind="Deployment",
+                object_name="timeout-app",
+                namespace="default",
+                change_type=ChangeType.RESOURCE_INCREASE,
+                current_values={"cpu": "100m"},
+                proposed_values={"cpu": "200m"},
+                cpu_change_percent=100.0,
+                memory_change_percent=0.0,
+                estimated_cost_impact=5.0,
+            )
+        ]
+
+        # Mock timeout in kubectl command
+        async def mock_timeout_exec(*args, **kwargs):
+            raise asyncio.TimeoutError("Command timed out")
+
+        with patch("asyncio.create_subprocess_exec", side_effect=mock_timeout_exec):
+            report = await non_mock_validator.validate_transaction(transaction, changes)
+
+            # Should complete but with timeout-related failures
+            assert report.overall_success is False
+            assert len(report.results) > 0
+
+    @pytest.mark.asyncio
+    async def test_pod_validation_for_non_pod_resources(
+        self, non_mock_validator: PostExecutionValidator
+    ) -> None:
+        """Test that pod validation is skipped for non-pod controlling resources."""
+        command = KubectlCommand(
+            operation="patch",
+            resource_type="ConfigMap",  # ConfigMap doesn't control pods
+            resource_name="test-config",
+            namespace="default",
+            kubectl_args=["patch", "configmap", "test-config"],
+        )
+
+        result = ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.COMPLETED,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            duration_seconds=1.0,
+            exit_code=0,
+            stdout="configmap/test-config patched",
+        )
+
+        transaction = ExecutionTransaction(
+            confirmation_token_id="test-token-123",
+            commands=[command],
+            execution_mode=ExecutionMode.SINGLE,
+            dry_run=False,
+            command_results=[result],
+            overall_status=ExecutionStatus.COMPLETED,
+        )
+
+        changes = [
+            ResourceChange(
+                object_kind="ConfigMap",
+                object_name="test-config",
+                namespace="default",
+                change_type=ChangeType.RESOURCE_INCREASE,
+                current_values={"data": "old"},
+                proposed_values={"data": "new"},
+                cpu_change_percent=0.0,
+                memory_change_percent=0.0,
+                estimated_cost_impact=0.0,
+            )
+        ]
+
+        # Mock successful resource retrieval
+        mock_manifest = {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {"name": "test-config", "namespace": "default"},
+            "data": {"config": "new"},
+        }
+
+        with patch.object(
+            non_mock_validator, "_get_resource_manifest", return_value=mock_manifest
+        ):
+            report = await non_mock_validator.validate_transaction(transaction, changes)
+
+            # Should complete but only with resource change validation (no pod validations)
+            validation_types = set(r.validation_type for r in report.results)
+            assert "resource_changes" in validation_types
+            assert (
+                "pod_readiness" not in validation_types
+            )  # Should be skipped for ConfigMap
+            assert (
+                "pod_stability" not in validation_types
+            )  # Should be skipped for ConfigMap
+
+    @pytest.mark.asyncio
+    async def test_verify_resource_requests_without_containers(self) -> None:
+        """Test resource request verification with manifest without containers."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        # Manifest without containers
+        manifest = {"spec": {"template": {"spec": {}}}}  # No containers key
+
+        change = ResourceChange(
+            object_kind="Deployment",
+            object_name="test-app",
+            namespace="default",
+            change_type=ChangeType.RESOURCE_INCREASE,
+            current_values={"cpu": "100m"},
+            proposed_values={"cpu": "200m"},
+            cpu_change_percent=100.0,
+            memory_change_percent=0.0,
+            estimated_cost_impact=5.0,
+        )
+
+        success, message, details = validator._verify_resource_requests(
+            manifest, change
+        )
+
+        assert success is False
+        assert "No containers found" in message
+
+    @pytest.mark.asyncio
+    async def test_verify_resource_requests_with_none_change(self) -> None:
+        """Test resource request verification with None original change."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        manifest = {"spec": {"template": {"spec": {"containers": []}}}}
+
+        success, message, details = validator._verify_resource_requests(manifest, None)
+
+        assert success is True
+        assert "No original change data" in message
+
+    @pytest.mark.asyncio
+    async def test_check_resource_health_generic_resource(self) -> None:
+        """Test health check for generic (non-deployment) resources."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        # Generic resource with conditions
+        manifest = {
+            "status": {
+                "conditions": [
+                    {"type": "Available", "status": "True"},
+                    {"type": "Ready", "status": "True"},
+                    {"type": "Failed", "status": "False"},
+                ]
+            }
+        }
+
+        success, message, details = validator._check_resource_health(
+            manifest, "Service"
+        )
+
+        assert success is True
+        assert "2 healthy conditions" in message
+        assert details["healthy_conditions"] == 2
+
+    @pytest.mark.asyncio
+    async def test_check_pod_readiness_without_conditions(self) -> None:
+        """Test pod readiness check for pod without Ready condition."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        pod = {
+            "status": {
+                "phase": "Running",
+                "conditions": [
+                    {"type": "ContainersReady", "status": "True"},
+                    # No Ready condition
+                ],
+            }
+        }
+
+        is_ready, status = validator._check_pod_readiness(pod)
+
+        assert is_ready is False
+        assert "No Ready condition found" in status
+
+    @pytest.mark.asyncio
+    async def test_check_pod_stability_with_waiting_containers(self) -> None:
+        """Test pod stability check with containers in waiting state."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        pod = {
+            "status": {
+                "containerStatuses": [
+                    {
+                        "name": "app",
+                        "restartCount": 2,
+                        "state": {
+                            "waiting": {
+                                "reason": "ImagePullBackOff",
+                                "message": "Failed to pull image",
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+
+        is_stable, status = validator._check_pod_stability(pod)
+
+        assert is_stable is False
+        assert "ImagePullBackOff" in status
+
+    @pytest.mark.asyncio
+    async def test_find_command_by_id_not_found(self) -> None:
+        """Test finding command by ID when not found."""
+        validator = PostExecutionValidator(mock_commands=True)
+
+        commands = [
+            KubectlCommand(
+                operation="patch",
+                resource_type="Deployment",
+                resource_name="app1",
+                namespace="default",
+                kubectl_args=["patch", "deployment", "app1"],
+            )
+        ]
+
+        result = validator._find_command_by_id(commands, "nonexistent-id")
+
+        assert result is None
