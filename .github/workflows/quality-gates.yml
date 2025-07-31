@@ -1,0 +1,111 @@
+name: Quality Gates and Comprehensive Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  comprehensive-testing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}/src
+      PYTHONDONTWRITEBYTECODE: 1
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Run comprehensive test suite
+        run: |
+          # Run all test suites with comprehensive coverage
+          uv run python scripts/run_tests.py --suite safety --timeout-minutes 5
+          uv run python scripts/run_tests.py --suite unit --timeout-minutes 10
+          uv run python scripts/run_tests.py --suite integration --timeout-minutes 8
+          uv run python scripts/run_tests.py --suite performance --timeout-minutes 6
+          uv run python scripts/run_tests.py --suite chaos --timeout-minutes 6
+
+      - name: Generate comprehensive coverage report
+        run: |
+          uv run python scripts/run_tests.py --coverage-only
+        timeout-minutes: 2
+
+      - name: Validate quality gates
+        run: |
+          uv run python scripts/run_tests.py --quality-gates
+
+      - name: Upload comprehensive coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-coverage-${{ matrix.python-version }}
+          path: |
+            htmlcov/
+            test-reports/
+            coverage.xml
+
+      - name: Update coverage badge
+        uses: tj-actions/coverage-badge-py@v2
+        with:
+          output: coverage.svg
+
+      - name: Commit coverage badge
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: updated coverage.svg"
+          file_pattern: coverage.svg
+
+  performance-benchmarks:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Run performance benchmarks
+        run: |
+          uv run python scripts/run_tests.py --suite performance --verbose --no-coverage
+
+      - name: Store benchmark result
+        continue-on-error: true
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: "customSmallerIsBetter"
+          output-file-path: test-reports/benchmark.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: "200%"
+          fail-on-alert: false
+          skip-fetch-gh-pages: true
