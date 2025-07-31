@@ -942,7 +942,12 @@ class KrrMCPServer:
                             )
                             change.calculate_impact()
                             resource_changes.append(change)
-                        except Exception:
+                        except Exception as e:
+                            logger.warning(
+                                "Failed to parse resource change data",
+                                change_data=change_data,
+                                error=str(e),
+                            )
                             continue
 
                 if not resource_changes:
