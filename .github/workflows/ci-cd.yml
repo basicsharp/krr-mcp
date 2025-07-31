@@ -100,9 +100,9 @@ jobs:
 
     - name: Run dependency security scan
       run: |
-        uv add safety
-        uv run safety check --json --output safety-report.json
-        uv run safety check
+        uv add pip-audit
+        uv run pip-audit --format json --output pip-audit-report.json
+        uv run pip-audit
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -111,7 +111,7 @@ jobs:
         name: security-reports
         path: |
           bandit-report.json
-          safety-report.json
+          pip-audit-report.json
 
   build:
     name: Build Package
