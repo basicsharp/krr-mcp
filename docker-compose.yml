@@ -1,0 +1,122 @@
+# KRR MCP Server - Docker Compose Configuration
+# Provides easy development and testing environment
+
+version: '3.8'
+
+services:
+  krr-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-0.1.0}
+        BUILD_DATE: ${BUILD_DATE:-2025-01-31}
+        VCS_REF: ${VCS_REF:-latest}
+    image: krr-mcp-server:${TAG:-latest}
+    container_name: krr-mcp-server
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      - KRR_MCP_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - KRR_MCP_LOG_FORMAT=${LOG_FORMAT:-json}
+      - KUBERNETES_CONTEXT=${KUBERNETES_CONTEXT:-default}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}
+
+    # Mount kubeconfig for Kubernetes access
+    volumes:
+      - ${HOME}/.kube/config:/app/.kube/config:ro
+      - krr-mcp-logs:/app/logs
+      - krr-mcp-data:/app/data
+
+    # Health check
+    healthcheck:
+      test: ["/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits for safety
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+    # Security context
+    user: "1000:1000"  # Non-root user
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+
+    # Network configuration
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+
+    # Dependencies (optional monitoring stack)
+    depends_on:
+      prometheus:
+        condition: service_healthy
+        required: false
+
+  # Optional Prometheus for krr metrics (development/testing)
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: krr-mcp-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring
+
+  # Optional Grafana for visualization (development/testing)
+  grafana:
+    image: grafana/grafana:9.3.0
+    container_name: krr-mcp-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+volumes:
+  krr-mcp-logs:
+    driver: local
+  krr-mcp-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  default:
+    name: krr-mcp-network
+    driver: bridge

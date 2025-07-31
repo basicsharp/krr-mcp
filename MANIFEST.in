@@ -1,0 +1,56 @@
+# KRR MCP Server - Package Manifest
+# Specifies additional files to include in the distribution package
+
+# Include documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+
+# Include configuration examples
+include .env.docker
+recursive-include configs *.yml *.yaml *.json *.toml
+
+# Include Docker files for reference
+include Dockerfile
+include docker-compose.yml
+include .dockerignore
+
+# Include type stubs if any
+recursive-include src *.py *.pyi
+
+# Exclude test files and development artifacts
+recursive-exclude tests *
+recursive-exclude test-reports *
+recursive-exclude htmlcov *
+recursive-exclude htmlcov-safety *
+exclude .coverage
+exclude coverage.xml
+exclude coverage.svg
+exclude pytest.ini
+exclude .pytest_cache
+
+# Exclude development files
+exclude .pre-commit-config.yaml
+exclude .gitignore
+exclude PLANNING.md
+exclude TASKS.md
+exclude CLAUDE.md
+exclude PRD.md
+exclude krr-cli-help.md
+exclude main.py
+
+# Exclude IDE and editor files
+recursive-exclude . *.pyc *.pyo *.swp *.swo *~
+recursive-exclude . __pycache__
+exclude .DS_Store
+exclude Thumbs.db
+
+# Exclude virtual environments
+recursive-exclude .venv *
+recursive-exclude venv *
+recursive-exclude env *
+
+# Exclude build artifacts
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude *.egg-info *

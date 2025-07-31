@@ -5,16 +5,38 @@ description = "MCP server for safe Kubernetes resource optimization using krr"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "KRR MCP Server Team" }
+    { name = "KRR MCP Server Team", email = "krr-mcp-server@example.com" }
 ]
-keywords = ["kubernetes", "optimization", "mcp", "krr", "ai"]
+maintainers = [
+    { name = "KRR MCP Server Team", email = "krr-mcp-server@example.com" }
+]
+license = { text = "Apache-2.0" }
+keywords = [
+    "kubernetes",
+    "optimization",
+    "mcp",
+    "krr",
+    "ai",
+    "model-context-protocol",
+    "resource-management",
+    "cost-optimization",
+    "devops",
+    "claude"
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
     "Topic :: System :: Systems Administration",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Environment :: Console",
+    "Typing :: Typed",
 ]
 dependencies = [
     "fastmcp>=0.1.0",
@@ -24,6 +46,13 @@ dependencies = [
     "typer>=0.9.0",
     "python-dotenv>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/krr-mcp/krr-mcp-server"
+Documentation = "https://github.com/krr-mcp/krr-mcp-server/blob/main/README.md"
+Repository = "https://github.com/krr-mcp/krr-mcp-server.git"
+Issues = "https://github.com/krr-mcp/krr-mcp-server/issues"
+Changelog = "https://github.com/krr-mcp/krr-mcp-server/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
@@ -39,6 +68,10 @@ dev = [
 
 [project.scripts]
 krr-mcp-server = "src.server:main"
+krr-mcp = "src.server:main"
+
+[project.entry-points."mcp.servers"]
+krr = "src.server:create_server"
 
 [build-system]
 requires = ["hatchling"]

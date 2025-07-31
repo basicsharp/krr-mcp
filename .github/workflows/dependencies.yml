@@ -1,0 +1,78 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "0.4.30"
+
+    - name: Update dependencies
+      run: |
+        # Update lock file
+        uv lock --upgrade
+
+        # Check for any changes
+        if git diff --quiet uv.lock; then
+          echo "No dependency updates available"
+          echo "HAS_UPDATES=false" >> $GITHUB_ENV
+        else
+          echo "Dependencies updated"
+          echo "HAS_UPDATES=true" >> $GITHUB_ENV
+        fi
+
+    - name: Run tests with updated dependencies
+      if: env.HAS_UPDATES == 'true'
+      run: |
+        uv sync --all-extras
+        uv run pytest tests/ --tb=short --maxfail=5
+
+    - name: Create Pull Request
+      if: env.HAS_UPDATES == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: update dependencies"
+        title: "chore: update dependencies"
+        body: |
+          ## Dependency Updates
+
+          This PR contains automated dependency updates.
+
+          ### Changes
+          - Updated `uv.lock` with latest compatible versions
+          - All tests pass with updated dependencies
+
+          ### Review Notes
+          - Please review the changes for any breaking changes
+          - Check that all security updates are included
+          - Verify that tests pass in CI
+
+          This PR was automatically created by the dependency update workflow.
+        branch: chore/update-dependencies
+        delete-branch: true
+        labels: |
+          dependencies
+          automated
+        reviewers: |
+          # Add your team members here

@@ -1,0 +1,12 @@
+# Trivy security scanner ignore file
+# Format: CVE-ID or package name
+
+# Ignore known false positives for container scanning
+# Add specific CVEs that are false positives for our use case
+
+# Example entries (remove when not needed):
+# CVE-2023-12345  # False positive in base image
+# CVE-2024-98765  # Not applicable to our use case
+
+# Ignore issues in test dependencies that don't affect production
+# (none currently)

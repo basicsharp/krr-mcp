@@ -1,0 +1,96 @@
+# KRR MCP Server - Docker build context exclusions
+
+# Development files
+.git/
+.gitignore
+.pre-commit-config.yaml
+.vscode/
+.idea/
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Test and coverage files
+tests/
+test-reports/
+htmlcov/
+htmlcov-safety/
+.coverage
+.pytest_cache/
+*.coverage
+coverage.xml
+coverage.svg
+
+# Documentation build artifacts
+docs/_build/
+site/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Configuration that shouldn't be in container
+.env.local
+.env.*.local
+local.env
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Documentation source (keep README.md)
+docs/
+!README.md
+PLANNING.md
+TASKS.md
+CLAUDE.md
+PRD.md
+
+# Scripts not needed in container
+scripts/
+
+# Test configuration files
+pytest.ini
+.coveragerc
+mypy.ini
+
+# Development dependencies file
+requirements-dev.txt
+
+# Large files that aren't needed
+*.tar.gz
+*.zip
+*.rar
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini

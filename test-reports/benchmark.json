@@ -1,7 +1,54 @@
-[
-  {
-    "name": "fallback_performance_test",
-    "unit": "seconds",
-    "value": 0.1
-  }
-]
+{
+  "benchmarks": [
+    {
+      "name": "data_processing_100_items",
+      "unit": "seconds",
+      "value": 0.11972379684448242
+    },
+    {
+      "name": "concurrent_operations_10",
+      "unit": "seconds",
+      "value": 0.011384010314941406
+    },
+    {
+      "name": "json_serialization_1000_items",
+      "unit": "seconds",
+      "value": 0.007327079772949219
+    },
+    {
+      "name": "large_cluster_simulation",
+      "unit": "seconds",
+      "value": 0.10821294784545898
+    },
+    {
+      "name": "concurrent_request_handling",
+      "unit": "seconds",
+      "value": 0.010791778564453125
+    },
+    {
+      "name": "memory_usage_optimization",
+      "unit": "MB",
+      "value": 0.0
+    },
+    {
+      "name": "caching_performance",
+      "unit": "seconds",
+      "value": 0.014007091522216797
+    },
+    {
+      "name": "memory_efficiency",
+      "unit": "MB",
+      "value": -1.078125
+    },
+    {
+      "name": "quick_scan_baseline",
+      "unit": "seconds",
+      "value": 0.011664867401123047
+    },
+    {
+      "name": "medium_preview_baseline",
+      "unit": "seconds",
+      "value": 0.11712193489074707
+    }
+  ]
+}
