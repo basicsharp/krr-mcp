@@ -1,6 +1,6 @@
 # KRR MCP Server API Reference
 
-Generated on: 2025-07-31T21:43:01.872940
+Generated on: 2026-09-07T14:39:24.632176
 
 MCP server for safe Kubernetes resource optimization using krr
 
@@ -130,3 +130,4 @@ Get history of previous executions and their status
 **Returns:** Dictionary with execution history
 
 ---
+
